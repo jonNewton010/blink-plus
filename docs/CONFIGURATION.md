@@ -86,6 +86,10 @@ For 0.3.0, register /blink_plus/frontend/blink-plus-ptt.js?v=0.3.0 as a JavaScri
 The element uses your authenticated HA session and camera control permission. The integration encodes microphone audio using HA's existing media libraries. Browser capture requires HTTPS or trusted localhost. Hold to speak, release to stop, and wait for stopping to finish before pressing again.
 
 
+### Sidebar page
+
+**Show the Blink Plus page in the sidebar** (on by default) adds a page listing every camera with live view on request and its controls. Switch it off to remove the page; the Blink Plus camera card stays available for your own dashboards. See the [dashboard guide](DASHBOARD.md).
+
 ### Camera lighting
 
 Two camera models get a light entity automatically:

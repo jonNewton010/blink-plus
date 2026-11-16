@@ -127,7 +127,13 @@ class BlinkOptionsFlow(OptionsFlow):
             schema[vol.Required(key, default=values[key])] = vol.All(
                 vol.Coerce(int), vol.Range(min=minimum, max=maximum)
             )
-        for key in ("live_enabled", "cloud_enabled", "invert_pan", "invert_tilt"):
+        for key in (
+            "live_enabled",
+            "cloud_enabled",
+            "invert_pan",
+            "invert_tilt",
+            "sidebar_panel",
+        ):
             schema[vol.Required(key, default=values[key])] = bool
         schema[vol.Optional("pan_tilt_cameras", default=values["pan_tilt_cameras"])] = (
             selector.SelectSelector(

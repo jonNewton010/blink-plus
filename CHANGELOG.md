@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 - 2026-11-16
+
+Everything works after installation: a sidebar page, a complete camera card and automatic loading.
+
+- Added a **Blink Plus** page to the Home Assistant sidebar. It lists every Blink Plus camera with its picture, live view on request, controls and readings, plus arm/disarm for each Blink system. A new option, **Show the Blink Plus page in the sidebar** (on by default), removes it.
+- Added the **Blink Plus camera** card (`custom:blink-plus-camera-card`). One line of configuration, the camera entity, gives live video with the browser's player controls (pause/play, time bar, mute and volume, full screen), Hold to talk, a light button, a pan/tilt pad, New picture, Record clip, Motion detection and the camera's readings. Each part is found through the camera's device and can be hidden with a card option.
+- The card plays video in its own player, using Home Assistant's documented `camera/stream` call and a bundled copy of hls.js 1.7.4 (Apache-2.0). It does not use Home Assistant's internal camera player, so a frontend update cannot remove the controls.
+- The integration now loads its dashboard code by itself. Adding `/blink_plus/frontend/blink-plus-ptt.js` under Resources is no longer needed; an existing entry keeps working and can be removed.
+- Talk and pan/tilt buttons appear on the card only while live video is playing, because they act on the live session. A hidden browser tab stops its live video after 15 seconds.
+- Added a [dashboard guide](docs/DASHBOARD.md). No changes to entities, stored data or the login.
+
 ## 1.0.2 - 2026-11-16
 
 Real light state, and the Mini 2 spotlight.

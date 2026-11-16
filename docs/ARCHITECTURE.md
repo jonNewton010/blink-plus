@@ -41,7 +41,7 @@ The HTTP view serializes talk requests per camera, checks control permission, ac
 
 ## Native dashboard microphone
 
-The bundled custom:blink-plus-ptt element and worklet are served from /blink_plus/frontend. The worklet emits 100 ms packets of 16 kHz mono PCM. HA's authenticated websocket carries the packets to an in-memory PyAV AAC encoder, then the existing relay sends ADTS frames to the camera.
+The bundled custom:blink-plus-ptt element and worklet are served from /blink_plus/frontend. From 1.1.0 `panel.py` registers `blink-plus-camera-card.js` with the frontend as an extra module (version in the address), so the card and the push-to-talk element are available on every dashboard without a Resources entry, and registers a custom sidebar panel (`blink-plus-panel.js`) while any account has the sidebar option on. Both are skipped when the frontend integration is not running. The card owns its `<video>` element: it requests the stream with the `camera/stream` websocket command and plays HLS through the bundled hls.js or the browser's native support; it uses no internal Home Assistant player elements. The worklet emits 100 ms packets of 16 kHz mono PCM. HA's authenticated websocket carries the packets to an in-memory PyAV AAC encoder, then the existing relay sends ADTS frames to the camera.
 
 A microphone session owns its original websocket, entity, live stream and shared per-camera talk lock. Sequence checks and a four-packet queue bound stale input. Five seconds without input or the one-minute session limit ends talk. Releasing drains the bounded final audio before closing the speaker. Disconnect and integration unload cancel the worker and release its lock. A new hold waits for the preceding stop to finish.
 

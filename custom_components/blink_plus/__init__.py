@@ -4,6 +4,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from .const import DEFAULTS, DOMAIN, PLATFORMS
 from .coordinator import BlinkCoordinator
+from .panel import async_register_frontend, async_update_panel
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -26,6 +27,8 @@ async def async_setup(hass, config):
         ]
     )
     microphone.setup(hass)
+    # The camera card and push-to-talk element load by themselves: no dashboard Resource to add.
+    await async_register_frontend(hass)
     return True
 
 
@@ -46,6 +49,7 @@ async def async_setup_entry(hass, entry):
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, shutdown)
     )
     entry.async_on_unload(entry.add_update_listener(_reload))
+    await async_update_panel(hass)
     return True
 
 
@@ -58,5 +62,6 @@ async def _reload(hass, entry):
 async def async_unload_entry(hass, entry):
     if await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.close()
+        await async_update_panel(hass, skip=entry)
         return True
     return False

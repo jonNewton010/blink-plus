@@ -2,6 +2,8 @@
 
 Blink Plus 0.3.0 adds a microphone button directly to an HA dashboard camera view. It uses the signed-in HA user's connection and encodes microphone audio inside Blink Plus.
 
+From 1.1.0 the [Blink Plus camera card and sidebar page](DASHBOARD.md) include Hold to talk and need no setup; the integration also loads this element by itself, so the resource step below is only needed on older versions. The rest of this page is for placing the button by hand in your own card.
+
 ## Add the resource
 
 After installing 0.3.0 or newer and restarting HA, open Settings > Dashboards > Resources. Advanced mode may be needed to show Resources.

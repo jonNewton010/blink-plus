@@ -50,7 +50,8 @@
                                                            "cloud_history_days":  "Cloud clip history (days)",
                                                            "cloud_cache_mb":  "Downloaded cloud media cache (MB)",
                                                            "cloud_max_clips":  "Maximum cloud clips listed",
-                                                           "cloud_enabled":  "Enable cloud clip browsing"
+                                                           "cloud_enabled":  "Enable cloud clip browsing",
+                                                           "sidebar_panel":  "Show the Blink Plus page in the sidebar"
                                                        }
                                           }
                              },

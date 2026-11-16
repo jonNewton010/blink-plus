@@ -4,14 +4,16 @@
 
 Native Blink live video and audio, dashboard push-to-talk, local recording, cloud clip browsing, and camera controls in one Home Assistant custom integration. Setup and options are configured in the UI.
 
-[Installation](#installation) | [Options](docs/CONFIGURATION.md) | [HA push-to-talk](docs/NATIVE_PTT.md) | [Talk API](docs/TWO_WAY_TALK.md) | [How it works](docs/ARCHITECTURE.md) | [Test results](docs/VALIDATION.md) | [Changelog](CHANGELOG.md)
+[Installation](#installation) | [Dashboard page and card](docs/DASHBOARD.md) | [Options](docs/CONFIGURATION.md) | [HA push-to-talk](docs/NATIVE_PTT.md) | [Talk API](docs/TWO_WAY_TALK.md) | [How it works](docs/ARCHITECTURE.md) | [Test results](docs/VALIDATION.md) | [Changelog](CHANGELOG.md)
 
-**Current release: v1.0.2.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
+**Current release: v1.1.0.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
 
 Live view and cloud browsing are enabled by default. A camera starts streaming when a player connects. Snapshot, recording, motion, arming, and enabled pan/tilt controls can operate your cameras; setup does not automatically arm the system or start recordings. Battery cameras still need to wake and contact Blink's cloud.
 
 ## Included features
 
+- A ready-made **Blink Plus** page in the sidebar and a **Blink Plus camera** dashboard card, both working straight after installation with nothing to add under Resources.
+- Live video in the card's own player with pause/play, time bar, mute and full screen, and Hold to talk, light, pan/tilt, snapshot, recording and motion controls on the same card.
 - Native H.264 video with AAC audio through Home Assistant's stream integration.
 - One shared upstream live session per camera, bounded sessions, reconnect cooldown, and cleanup on unload.
 - A direct native MPEG-TS stream per camera for low-delay players and tools (`/api/blink_plus/live/<camera entity id>`, authenticated).
@@ -28,7 +30,15 @@ Live view and cloud browsing are enabled by default. A camera starts streaming w
 - UI login, verification-code entry, reauthentication, configuration, and redacted diagnostics.
 - Login renewal that retries through a Blink outage and asks you to sign in again only when Blink refuses the stored token. Your password and verification code are never stored.
 
-## New in 1.0.2
+## New in 1.1.0
+
+**Works out of the box.** After installing and signing in, open **Blink Plus** in the sidebar: every camera is there with live view on request, Hold to talk, light and pan/tilt buttons, New picture, Record clip, Motion detection, its readings, and arm/disarm for each Blink system.
+
+**One card for everything.** Add the **Blink Plus camera** card to any dashboard and choose a camera; the card finds the rest. It plays video in its own player with the browser's controls and does not depend on Home Assistant's internal camera player.
+
+**No Resources step.** The integration loads its dashboard code by itself. See the [dashboard guide](docs/DASHBOARD.md).
+
+## Added in 1.0.2
 
 **Real light state.** The Floodlight entity now shows what Blink reports for the lamp, not the last command Home Assistant sent. It follows the lamp when its own timer switches it off and when motion or the Blink app switches it.
 
@@ -65,7 +75,7 @@ HACS must already be installed. UI wording can vary by version. See [HACS custom
 
 ### Manual installation
 
-Download the release's `blink-plus-v1.0.2.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
+Download the release's `blink-plus-v1.1.0.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
 
 ### Moving from the built-in Blink integration
 
@@ -73,11 +83,11 @@ Blink Plus uses its own `blink_plus` domain and creates new entities. Existing d
 
 ## Updating from an earlier version
 
-Download 1.0.2 in HACS / Marketplace and restart Home Assistant. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
+Download 1.1.0 in HACS / Marketplace, restart Home Assistant and refresh the browser page once. The Blink Plus page appears in the sidebar; the option to hide it is in the integration's Configure menu. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
 
 ## Everyday use
 
-Open a camera entity or add a camera card to view live video. Use **Take snapshot** for a fresh still; viewing the cached image does not itself request a new snapshot.
+Open **Blink Plus** in the sidebar, or add the **Blink Plus camera** card to a dashboard, to view live video with all of a camera's controls. A camera entity in any other Home Assistant card also works. Use **Take snapshot** for a fresh still; viewing the cached image does not itself request a new snapshot.
 
 Press **Record local clip** to save an MP4. By default, files go into the first configured HA media directory under `blink_plus`. Local recordings persist and have no automatic retention policy. The camera's `last_local_recording` attribute identifies the most recent saved file.
 
@@ -91,7 +101,7 @@ Seven cameras, including Mini, battery-camera, and doorbell classes, passed real
 
 Local MP4 recording was tested on all three camera classes. Cloud browsing listed 1,000 clips across seven camera folders and verified authenticated, seekable playback. Snapshot, motion/arming, and mount controls were exercised and original settings restored.
 
-The automated suite contains **121 tests**, plus five opt-in live-test groups. See [Validation](docs/VALIDATION.md) for measurements and limits. Fresh login/MFA has automated coverage; live tests reused an existing session. Other models, phone playback, casting, and long-term reliability remain unverified.
+The automated suite contains **127 tests**, plus five opt-in live-test groups. See [Validation](docs/VALIDATION.md) for measurements and limits. Fresh login/MFA has automated coverage; live tests reused an existing session. Other models, phone playback, casting, and long-term reliability remain unverified.
 
 Two-way talk was verified with a Mini-class camera using real voice and tones, including with the Blink app closed. Other camera models need independent speaker testing. The included HA dashboard element provides microphone capture. See [Native push-to-talk](docs/NATIVE_PTT.md).
 

@@ -1,5 +1,16 @@
 # Blink Plus validation - 2026-11-10
 
+## 1.1.0 sidebar page, camera card and automatic loading validation
+
+The integration suite passes 127 automated tests, with five live groups skipped in normal runs. New tests cover: nothing registered when the frontend is absent; the card script registered with its version; the sidebar page added with an account, removed with it, and following the option; the option offered and saved; and the shipped files (card, page, hls.js) being wired together without any reference to Home Assistant's internal camera player. CI syntax-checks the card and page scripts.
+
+Browser check on the owner's Home Assistant 2026.11.1 (Chrome, desktop), 2026-11-16, with the card and page scripts served by the integration:
+
+- Card on a Mini 2: 1920x1080 live video played in the card's own player through hls.js about 1.2 seconds behind live, with the browser's controls, Hold to talk and the Spotlight button on the picture.
+- Page: all seven cameras listed with names, New picture / Record clip / Motion detection buttons and readings, the system's arm state in the header, and no live video until **Start live view** was pressed. Pressing it on a Mini with a pan/tilt mount played video about 1.4 seconds behind live and then showed Hold to talk and the pan/tilt pad; no other camera started.
+
+Limits: in that check the scripts were loaded by hand into an open Home Assistant page; automatic loading and the sidebar entry are covered by the automated tests and were first exercised on a real installation after release. The buttons on the card were not pressed in the browser (the same actions are tested through their entities). Phones, the companion apps, Safari's native HLS path and more than one account were not checked.
+
 ## 1.0.2 reported light state and Mini 2 spotlight validation
 
 The integration suite passes 121 automated tests, with five live groups skipped in normal runs. Light tests cover discovery for both models, reported state at startup, commands, busy and rejected answers, following a lamp that switches itself off, a lamp switched on outside Home Assistant, the limit on follow-up reads, failed or empty status reads (state kept and marked assumed, no exception text logged) and a blinkpy without the lighting call.

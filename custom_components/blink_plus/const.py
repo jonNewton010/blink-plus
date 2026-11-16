@@ -19,4 +19,5 @@ DEFAULTS = {
     "tilt_step": 10,
     "invert_pan": True,
     "invert_tilt": False,
+    "sidebar_panel": True,
 }
