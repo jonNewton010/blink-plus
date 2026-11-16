@@ -106,7 +106,7 @@ camera, so it also follows changes Home Assistant did not make:
 - Motion lighting, and switching it in the Blink app.
 
 Blink Plus reads the state when it starts, on every poll (the polling interval
-option), 6 and 20 seconds after a command, and every 30 seconds while the lamp
+option), about 6 and 26 seconds after a command, and every 30 seconds while the lamp
 is on, for up to 10 minutes. A lamp switched on outside Home Assistant is
 therefore noticed at the next poll, not instantly. If Blink's report cannot be
 read, the entity keeps the last accepted command and is marked as an assumed
