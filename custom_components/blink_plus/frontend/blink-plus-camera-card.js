@@ -12,7 +12,7 @@
 // On the picture: Hold to talk (the bundled push-to-talk element), a light button for cameras with
 // a Blink Plus light entity, and a pan/tilt pad for cameras with Blink Plus pan/tilt buttons. Each
 // is found through the camera's device and can be switched off or set by hand in the card options.
-// Under the picture: the camera's name, New picture, Record clip and Motion detection, and the
+// Under the picture: the camera's name, Stop/Start live view, New picture, Record clip and Motion detection, and the
 // camera's readings (battery, temperature, signal, last recording) where the camera reports them.
 //
 // Options (all optional): talk, light, pan_tilt, controls, info: false hides that part;
@@ -339,6 +339,13 @@ class BlinkPlusCameraCard extends HTMLElement {
       }
       this.nameEl.textContent = this.cameraName(state);
       const parts = [this.nameEl];
+      // Stop closes the video at once; the camera's session ends when Home Assistant lets go of the stream.
+      const liveChip = this.chip("live", this.live ? "Stop live view" : "Start live view", () => {
+        if (this.live) this.end();
+        else this.start();
+      });
+      liveChip.classList.toggle("on", this.live);
+      parts.push(liveChip);
       const usable = (id) => id && hass.states[id] && hass.states[id].state !== "unavailable";
       if (snapshot && hass.states[snapshot]) {
         const chip = this.chip("snapshot", "New picture", () => this.act("snapshot", "button", "press", snapshot, "Taking picture…"));
@@ -468,6 +475,7 @@ class BlinkPlusCameraCard extends HTMLElement {
     this.played = false;
     this.began = Date.now();
     this.say("Connecting to the camera… (Blink takes 10–20 seconds)");
+    this.render();
     const video = this.video;
     video.muted = true; // browsers only autoplay muted video; unmute with the player's own button
     video.autoplay = true;
@@ -548,6 +556,11 @@ class BlinkPlusCameraCard extends HTMLElement {
     } else {
       this.fail(this.played ? "Live view ended." : "");
     }
+  }
+
+  end() {
+    this.wanted = false; // stopped by hand: returning to the tab must not start it again
+    this.stop("Live view stopped.");
   }
 
   fail(message) {

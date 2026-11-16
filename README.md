@@ -6,7 +6,7 @@ Native Blink live video and audio, dashboard push-to-talk, local recording, clou
 
 [Installation](#installation) | [Dashboard page and card](docs/DASHBOARD.md) | [Options](docs/CONFIGURATION.md) | [HA push-to-talk](docs/NATIVE_PTT.md) | [Talk API](docs/TWO_WAY_TALK.md) | [How it works](docs/ARCHITECTURE.md) | [Test results](docs/VALIDATION.md) | [Changelog](CHANGELOG.md)
 
-**Current release: v1.1.0.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
+**Current release: v1.1.1.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
 
 Live view and cloud browsing are enabled by default. A camera starts streaming when a player connects. Snapshot, recording, motion, arming, and enabled pan/tilt controls can operate your cameras; setup does not automatically arm the system or start recordings. Battery cameras still need to wake and contact Blink's cloud.
 
@@ -75,7 +75,7 @@ HACS must already be installed. UI wording can vary by version. See [HACS custom
 
 ### Manual installation
 
-Download the release's `blink-plus-v1.1.0.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
+Download the release's `blink-plus-v1.1.1.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
 
 ### Moving from the built-in Blink integration
 
@@ -83,7 +83,7 @@ Blink Plus uses its own `blink_plus` domain and creates new entities. Existing d
 
 ## Updating from an earlier version
 
-Download 1.1.0 in HACS / Marketplace, restart Home Assistant and refresh the browser page once. The Blink Plus page appears in the sidebar; the option to hide it is in the integration's Configure menu. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
+Download 1.1.1 in HACS / Marketplace, restart Home Assistant and refresh the browser page once. The Blink Plus page appears in the sidebar; the option to hide it is in the integration's Configure menu. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
 
 ## Everyday use
 

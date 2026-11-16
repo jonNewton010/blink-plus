@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 - 2026-11-16
+
+- Added a **Stop live view** button to the Blink Plus camera card, next to the camera's name. It closes the video at once and does not restart when you return to the tab; the same button reads **Start live view** when nothing is playing. The camera's own session ends shortly afterwards, when Home Assistant releases the stream.
+
 ## 1.1.0 - 2026-11-16
 
 Everything works after installation: a sidebar page, a complete camera card and automatic loading.

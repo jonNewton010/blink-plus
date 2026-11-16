@@ -118,6 +118,8 @@ def test_frontend_files_are_shipped_and_wired_together():
     # One automatic load brings push-to-talk along; the page never starts video by itself.
     assert 'import("./blink-plus-ptt.js")' in card
     assert "autoplay: false" in page
+    # A viewer can end a live view by hand.
+    assert '"Stop live view"' in card and "end()" in card
     # Classic-script syntax checks in CI reject static imports.
     for source in (card, page):
         assert not any(

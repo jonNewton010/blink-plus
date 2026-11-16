@@ -30,7 +30,7 @@ On the picture:
 
 Under the picture:
 
-- The camera's name, **New picture**, **Record clip** and **Motion detection**.
+- The camera's name, **Stop live view** (or **Start live view** when nothing is playing), **New picture**, **Record clip** and **Motion detection**.
 - The camera's readings, such as battery, temperature, Wi-Fi signal and last recording, where the camera reports them.
 
 The buttons on the picture are see-through until you point at or focus them.
@@ -57,6 +57,7 @@ A battery camera wakes whenever live video starts. On a dashboard that shows sev
 ### Live video behaviour
 
 - Starting takes about 10 to 20 seconds, as in the Blink app; a sleeping battery camera can take longer.
+- **Stop live view** closes the video at once and keeps it closed until you start it again. The camera's session with Blink ends shortly afterwards, when Home Assistant releases the stream (about half a minute).
 - Blink Plus ends a live session at the **Maximum live session** option. The card then shows **Start live view** again.
 - A hidden browser tab stops its live video after 15 seconds and starts it again when you return.
 - A busy camera can refuse a command during live view or recording. The card shows Blink's answer over the picture.
