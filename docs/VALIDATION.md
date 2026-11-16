@@ -1,5 +1,17 @@
 # Blink Plus validation - 2026-11-10
 
+## 1.0.2 reported light state and Mini 2 spotlight validation
+
+The integration suite passes 121 automated tests, with five live groups skipped in normal runs. Light tests cover discovery for both models, reported state at startup, commands, busy and rejected answers, following a lamp that switches itself off, a lamp switched on outside Home Assistant, the limit on follow-up reads, failed or empty status reads (state kept and marked assumed, no exception text logged) and a blinkpy without the lighting call.
+
+Live checks on the owner's account, 2026-11-16:
+
+- Wired Floodlight: `light.turn_on` and `light.turn_off` through Home Assistant 1.0.1 were accepted, and Blink's camera settings reported `light_status` on within about 3 seconds and off within about 3 seconds.
+- Wired Floodlight left on: Blink reported it off again about two and a half minutes later with no command sent, while the 1.0.1 entity still showed on. This is the gap 1.0.2 closes.
+- Mini 2: the same command was accepted (Blink names it `accessory_lights_on`) and `light_status` reported on within about 4 seconds and off after the off command.
+
+Limits: the lamps were not watched in person during these checks, so the evidence is Blink's own report. Motion-triggered lighting and switching from the Blink app were not exercised. The Mini 2 check used direct API calls, before the Spotlight entity existed.
+
 ## 1.0.1 login renewal and floodlight validation
 
 The integration suite passes 113 automated tests, with five live groups skipped in normal runs.

@@ -88,17 +88,35 @@ The element uses your authenticated HA session and camera control permission. Th
 
 ### Camera lighting
 
-Blink Wired Floodlight cameras (product type `superior`) automatically get a
-**Floodlight** light entity with on/off control. Other camera models do not get
-this entity. Mini 2 spotlights and battery floodlight accessories are not yet
-supported. Brightness and automatic lighting settings are not exposed.
+Two camera models get a light entity automatically:
 
-The state starts unknown and shows the last successful Blink Plus command
-(assumed state). Blinkpy does not report changes made by motion, a timer, or the
-Blink app; reloading resets this state. A busy camera/network can reject a
-command, including during live view or recording. Close live views and retry.
+| Camera | Product type | Entity |
+|--------|--------------|--------|
+| Blink Wired Floodlight | `superior` | **Floodlight** |
+| Blink Mini 2 | `hawk` | **Spotlight** |
 
-Added in 1.0.1. Example automation action:
+Both are on/off only. Other models do not get this entity. Battery floodlight
+accessories, brightness and the lamp's timer settings are not exposed.
+
+**State.** From 1.0.2 the entity shows the lamp state Blink reports for the
+camera, so it also follows changes Home Assistant did not make:
+
+- The lamp's own timer switching it off. A manually switched lamp turns itself
+  off after the duration set in the Blink app, unless that is set to stay on.
+- Motion lighting, and switching it in the Blink app.
+
+Blink Plus reads the state when it starts, on every poll (the polling interval
+option), 6 and 20 seconds after a command, and every 30 seconds while the lamp
+is on, for up to 10 minutes. A lamp switched on outside Home Assistant is
+therefore noticed at the next poll, not instantly. If Blink's report cannot be
+read, the entity keeps the last accepted command and is marked as an assumed
+state until a report arrives.
+
+A busy camera/network can reject a command, including during live view or
+recording. Close live views and retry.
+
+Floodlight added in 1.0.1; reported state and the Mini 2 spotlight in 1.0.2.
+Example automation action:
 
 ```yaml
 action: light.turn_on

@@ -6,7 +6,7 @@ Native Blink live video and audio, dashboard push-to-talk, local recording, clou
 
 [Installation](#installation) | [Options](docs/CONFIGURATION.md) | [HA push-to-talk](docs/NATIVE_PTT.md) | [Talk API](docs/TWO_WAY_TALK.md) | [How it works](docs/ARCHITECTURE.md) | [Test results](docs/VALIDATION.md) | [Changelog](CHANGELOG.md)
 
-**Current release: v1.0.1.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
+**Current release: v1.0.2.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
 
 Live view and cloud browsing are enabled by default. A camera starts streaming when a player connects. Snapshot, recording, motion, arming, and enabled pan/tilt controls can operate your cameras; setup does not automatically arm the system or start recordings. Battery cameras still need to wake and contact Blink's cloud.
 
@@ -24,15 +24,21 @@ Live view and cloud browsing are enabled by default. A camera starts streaming w
 - Motion, low battery, and connectivity binary sensors where reported.
 - Temperature, calibrated temperature, battery voltage or bars, Wi-Fi signal, Sync Module signal, and last-recording sensors where supported. Unsupported data is omitted; temperature follows HA's unit settings.
 - Optional left/right/up/down/home buttons for cameras with a compatible pan/tilt mount.
-- An on/off **Floodlight** light entity for Blink Wired Floodlight cameras.
+- An on/off **Floodlight** light entity for Blink Wired Floodlight cameras and a **Spotlight** entity for Blink Mini 2 cameras, showing the lamp state Blink reports.
 - UI login, verification-code entry, reauthentication, configuration, and redacted diagnostics.
 - Login renewal that retries through a Blink outage and asks you to sign in again only when Blink refuses the stored token. Your password and verification code are never stored.
 
-## New in 1.0.1
+## New in 1.0.2
+
+**Real light state.** The Floodlight entity now shows what Blink reports for the lamp, not the last command Home Assistant sent. It follows the lamp when its own timer switches it off and when motion or the Blink app switches it.
+
+**Mini 2 spotlight.** Blink Mini 2 cameras get a **Spotlight** light entity with the same on/off control and reported state. See [Camera lighting](docs/CONFIGURATION.md#camera-lighting).
+
+## Added in 1.0.1
 
 **Fewer false sign-in prompts.** Blink Plus stores Blink's tokens, not your password. Previously, if Blink was unreachable, failing or throttling at the moment the token was renewed (for example while Home Assistant restarted), the integration could show **Reauthenticate** although nothing was wrong with your login. Blink Plus now renews the token itself: only a token Blink actually refuses asks for a new login, and everything else is retried automatically.
 
-**Floodlight control.** Blink Wired Floodlight cameras get a **Floodlight** light entity with on/off control. The state is assumed from the last command Blink Plus sent, because Blink does not report changes made by motion, a timer or the Blink app. See [Camera lighting](docs/CONFIGURATION.md#camera-lighting).
+**Floodlight control.** Blink Wired Floodlight cameras get a **Floodlight** light entity with on/off control.
 
 The version number moves from 0.3.0 to 1.0.1. There is no 1.0.0 release and nothing to migrate.
 
@@ -59,7 +65,7 @@ HACS must already be installed. UI wording can vary by version. See [HACS custom
 
 ### Manual installation
 
-Download the release's `blink-plus-v1.0.1.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
+Download the release's `blink-plus-v1.0.2.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
 
 ### Moving from the built-in Blink integration
 
@@ -67,7 +73,7 @@ Blink Plus uses its own `blink_plus` domain and creates new entities. Existing d
 
 ## Updating from an earlier version
 
-Download 1.0.1 in HACS / Marketplace and restart Home Assistant. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
+Download 1.0.2 in HACS / Marketplace and restart Home Assistant. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
 
 ## Everyday use
 
@@ -85,13 +91,13 @@ Seven cameras, including Mini, battery-camera, and doorbell classes, passed real
 
 Local MP4 recording was tested on all three camera classes. Cloud browsing listed 1,000 clips across seven camera folders and verified authenticated, seekable playback. Snapshot, motion/arming, and mount controls were exercised and original settings restored.
 
-The automated suite contains **113 tests**, plus five opt-in live-test groups. See [Validation](docs/VALIDATION.md) for measurements and limits. Fresh login/MFA has automated coverage; live tests reused an existing session. Other models, phone playback, casting, and long-term reliability remain unverified.
+The automated suite contains **121 tests**, plus five opt-in live-test groups. See [Validation](docs/VALIDATION.md) for measurements and limits. Fresh login/MFA has automated coverage; live tests reused an existing session. Other models, phone playback, casting, and long-term reliability remain unverified.
 
 Two-way talk was verified with a Mini-class camera using real voice and tones, including with the Blink app closed. Other camera models need independent speaker testing. The included HA dashboard element provides microphone capture. See [Native push-to-talk](docs/NATIVE_PTT.md).
 
 ## Current limits
 
-Motion is polled rather than pushed. Floodlight control is on/off only, for Wired Floodlight cameras; its state is assumed, and it had automated coverage only at release (not yet confirmed on a physical floodlight). Mini 2 spotlights, battery floodlight accessories and brightness are not supported. Night vision, sensitivity, activity zones, remote clip settings, and Sync Module USB clips are not implemented. Camera-reported data varies by model and account. Blink cloud availability, subscription entitlements, and camera settings still apply.
+Motion is polled rather than pushed. Light control is on/off only, for Wired Floodlight and Mini 2 cameras. A change made outside Home Assistant while the lamp was off appears at the next poll, not instantly. Battery floodlight accessories, brightness and the lamp's timer settings are not supported. Night vision, sensitivity, activity zones, remote clip settings, and Sync Module USB clips are not implemented. Camera-reported data varies by model and account. Blink cloud availability, subscription entitlements, and camera settings still apply.
 
 Live sessions are time-limited to protect resources and batteries. Leaving a live card open can cause later reconnects; configure session duration and cooldown deliberately. Home Assistant's per-camera **Preload stream** setting is ignored for Blink Plus cameras, because it would keep waking them with nobody watching. For continuous surveillance, these cloud battery cameras have practical limits.
 
@@ -103,7 +109,7 @@ Live sessions are time-limited to protect resources and batteries. Leaving a liv
 - Recording fails: ensure the selected directory is allowed by HA and recording duration plus 10 seconds fits within the live-session limit.
 - Talk is silent or unavailable: wait for live video, check the AAC format and camera control permission, and use the [talk troubleshooting table](docs/TWO_WAY_TALK.md#http-interface).
 - Expired session: complete HA's reauthentication flow. From 1.0.1 this prompt appears only when Blink refuses the stored token (for example after a password change or signing out all devices); an outage shows the entry as retrying instead.
-- Floodlight does not respond: close live views and retry; a busy camera rejects commands. The shown state is the last command sent, not the lamp's reported state.
+- A light does not respond: close live views and retry; a busy camera rejects commands. A lamp that switches itself off after a short time is following its own timer, set in the Blink app.
 
 Download diagnostics from the integration menu and [open an issue](https://github.com/zperkd/blink-plus/issues). Include HA/Blink Plus versions, camera model, symptoms, and steps to reproduce. Review attachments before posting; never include passwords, verification codes, tokens, private clips, or unredacted account exports.
 

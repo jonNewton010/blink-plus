@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.2 - 2026-11-16
+
+Real light state, and the Mini 2 spotlight.
+
+- The Floodlight entity now shows the state Blink reports (`light_status` in the camera's settings) instead of the last command sent. It follows the lamp switching itself off on its timer and changes made by motion or the Blink app. The state is read at startup, on every poll, 6 and 20 seconds after a command, and every 30 seconds while the lamp is on (for up to 10 minutes).
+- Added a **Spotlight** light entity for Blink Mini 2 cameras (product type `hawk`), using the same on/off command and reported state.
+- If Blink's report cannot be read, the entity keeps the last accepted command and is marked as assumed, as in 1.0.1.
+- Verified on a Wired Floodlight: on, off and the lamp's own automatic switch-off were all reported by Blink. On a Mini 2, Blink accepted the commands and reported on and off.
+- The existing Floodlight entity keeps its entity ID and unique ID.
+
 ## 1.0.1 - 2026-11-16
 
 Login renewal that survives Blink outages, and on/off control for Wired Floodlight cameras.
