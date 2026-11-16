@@ -168,6 +168,9 @@ class BlinkCoordinator(DataUpdateCoordinator):
         )
         self.cloud = CloudClips(hass, self.api, self.options, self.auth_error)
         self.relays = {}
+        # Per camera serial: callbacks told the lamp state a live session reports. Kept here so a
+        # light entity can listen without creating a relay (none exists while live video is off).
+        self.light_listeners = {}
         self.camera_entities = {}
         self.recording = set()
         self.local_recordings = {}
@@ -258,6 +261,9 @@ class BlinkCoordinator(DataUpdateCoordinator):
                 self.options["max_live_seconds"],
                 self.options["reconnect_cooldown"],
                 self.auth_error,
+            )
+            self.relays[key].light_listeners = self.light_listeners.setdefault(
+                key, set()
             )
         return self.relays[key]
 

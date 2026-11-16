@@ -1,5 +1,18 @@
 # Blink Plus validation - 2026-11-10
 
+## 1.1.2 light during live view validation
+
+The integration suite passes 131 automated tests, with five live groups skipped in normal runs. New tests cover lamp reports on the accessory channel (with and without payload, not confused with mount positions), the exact on and off packets, waiting for the camera's confirmation, the command being refused without an open session, the light entity choosing the live session over the REST request while one is open, instant state from a camera report, and a failed session command raising a fixed message.
+
+Live checks on the owner's cameras, 2026-11-16:
+
+- With a Blink Plus live view open, Blink answered the REST lights request with code 307, "System is busy, please wait", for both on and off. The dashboard card showed that as "Blink is busy".
+- Mini 2: with a live session open, the on command on the session was confirmed by the camera in about 0.1 seconds and Blink's reported `light_status` read on; the off command likewise read off.
+- Wired Floodlight: the same sequence gave the same results (confirmations in about 0.12 seconds).
+- Both checks ran through the integration's own relay class, started the way a viewer starts it.
+
+Limits: these checks ran from the development mirror, not from the dashboard button on an installed 1.1.2. The lamps were not watched in person. A lamp switched by motion during a live view was not exercised. The command format matches what another open-source project documents for the Blink app; it is not published by Blink and may change.
+
 ## 1.1.0 sidebar page, camera card and automatic loading validation
 
 The integration suite passes 127 automated tests, with five live groups skipped in normal runs. New tests cover: nothing registered when the frontend is absent; the card script registered with its version; the sidebar page added with an account, removed with it, and following the option; the option offered and saved; and the shipped files (card, page, hls.js) being wired together without any reference to Home Assistant's internal camera player. CI syntax-checks the card and page scripts.

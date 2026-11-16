@@ -6,7 +6,7 @@ Native Blink live video and audio, dashboard push-to-talk, local recording, clou
 
 [Installation](#installation) | [Dashboard page and card](docs/DASHBOARD.md) | [Options](docs/CONFIGURATION.md) | [HA push-to-talk](docs/NATIVE_PTT.md) | [Talk API](docs/TWO_WAY_TALK.md) | [How it works](docs/ARCHITECTURE.md) | [Test results](docs/VALIDATION.md) | [Changelog](CHANGELOG.md)
 
-**Current release: v1.1.1.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
+**Current release: v1.1.2.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
 
 Live view and cloud browsing are enabled by default. A camera starts streaming when a player connects. Snapshot, recording, motion, arming, and enabled pan/tilt controls can operate your cameras; setup does not automatically arm the system or start recordings. Battery cameras still need to wake and contact Blink's cloud.
 
@@ -75,7 +75,7 @@ HACS must already be installed. UI wording can vary by version. See [HACS custom
 
 ### Manual installation
 
-Download the release's `blink-plus-v1.1.1.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
+Download the release's `blink-plus-v1.1.2.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
 
 ### Moving from the built-in Blink integration
 
@@ -83,7 +83,7 @@ Blink Plus uses its own `blink_plus` domain and creates new entities. Existing d
 
 ## Updating from an earlier version
 
-Download 1.1.1 in HACS / Marketplace, restart Home Assistant and refresh the browser page once. The Blink Plus page appears in the sidebar; the option to hide it is in the integration's Configure menu. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
+Download 1.1.2 in HACS / Marketplace, restart Home Assistant and refresh the browser page once. The Blink Plus page appears in the sidebar; the option to hide it is in the integration's Configure menu. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
 
 ## Everyday use
 
@@ -101,7 +101,7 @@ Seven cameras, including Mini, battery-camera, and doorbell classes, passed real
 
 Local MP4 recording was tested on all three camera classes. Cloud browsing listed 1,000 clips across seven camera folders and verified authenticated, seekable playback. Snapshot, motion/arming, and mount controls were exercised and original settings restored.
 
-The automated suite contains **127 tests**, plus five opt-in live-test groups. See [Validation](docs/VALIDATION.md) for measurements and limits. Fresh login/MFA has automated coverage; live tests reused an existing session. Other models, phone playback, casting, and long-term reliability remain unverified.
+The automated suite contains **131 tests**, plus five opt-in live-test groups. See [Validation](docs/VALIDATION.md) for measurements and limits. Fresh login/MFA has automated coverage; live tests reused an existing session. Other models, phone playback, casting, and long-term reliability remain unverified.
 
 Two-way talk was verified with a Mini-class camera using real voice and tones, including with the Blink app closed. Other camera models need independent speaker testing. The included HA dashboard element provides microphone capture. See [Native push-to-talk](docs/NATIVE_PTT.md).
 
@@ -119,7 +119,7 @@ Live sessions are time-limited to protect resources and batteries. Leaving a liv
 - Recording fails: ensure the selected directory is allowed by HA and recording duration plus 10 seconds fits within the live-session limit.
 - Talk is silent or unavailable: wait for live video, check the AAC format and camera control permission, and use the [talk troubleshooting table](docs/TWO_WAY_TALK.md#http-interface).
 - Expired session: complete HA's reauthentication flow. From 1.0.1 this prompt appears only when Blink refuses the stored token (for example after a password change or signing out all devices); an outage shows the entry as retrying instead.
-- A light does not respond: close live views and retry; a busy camera rejects commands. A lamp that switches itself off after a short time is following its own timer, set in the Blink app.
+- A light does not respond: from 1.1.2 it works while Blink Plus live view is open. If the Blink app or another viewer holds the camera's live view, or the camera is recording, Blink answers busy; try again afterwards. A lamp that switches itself off after a short time is following its own timer, set in the Blink app.
 
 Download diagnostics from the integration menu and [open an issue](https://github.com/zperkd/blink-plus/issues). Include HA/Blink Plus versions, camera model, symptoms, and steps to reproduce. Review attachments before posting; never include passwords, verification codes, tokens, private clips, or unredacted account exports.
 

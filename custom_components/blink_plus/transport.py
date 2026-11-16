@@ -60,6 +60,13 @@ async def recv_packets(stream):
                 acknowledgement = getattr(stream, "talk_ack", None)
                 if acknowledgement is not None:
                     acknowledgement.set()
+            if header[0] == 0x15 and length < 7:
+                # The camera's lamp on the accessory channel: 0 = off, 1 = on, sent when the
+                # session opens and whenever the lamp changes. (Mount positions are longer.)
+                lamp = int.from_bytes(header[1:5], "big")
+                report = getattr(stream, "light_report", None)
+                if lamp in (0, 1) and report is not None:
+                    report(lamp == 1)
             if not length:
                 continue
             payload = await stream.target_reader.readexactly(length)
@@ -118,6 +125,49 @@ class NativeRelay:
         self.talk_ack = asyncio.Event()
         self.talk_lock = asyncio.Lock()
         self.talk_worker = None
+        # The lamp as the camera last reported it on the open session; None without one.
+        self.light = None
+        self.light_event = asyncio.Event()
+        self.light_listeners = set()
+
+    @property
+    def live(self):
+        """Whether a live session is open on this camera right now."""
+        stream = self.stream
+        writer = getattr(stream, "target_writer", None)
+        return writer is not None and not writer.is_closing()
+
+    def _light_reported(self, on):
+        self.light = on
+        self.light_event.set()
+        for listener in tuple(self.light_listeners):
+            try:
+                listener(on)
+            except Exception as err:  # noqa: BLE001 - a listener must not end the session
+                _LOGGER.debug("Light listener failed (%s)", type(err).__name__)
+
+    async def set_light(self, on):
+        """Switch the camera's lamp through the open live session.
+
+        Blink refuses its normal lights request ("System is busy") for as long as a live view
+        is open, so during one the lamp is worked on the session itself, as the Blink app
+        does: IMMI 0x14 with command 1 (on) or 2 (off) and no payload. The camera confirms
+        with 0x15 carrying the new state.
+        """
+        if not self.live:
+            raise RuntimeError("Open live view before using the light this way")
+        expected = bool(on)
+        already = self.light is expected
+        self.light_event.clear()
+        await self._write_packet(0x14, 1 if expected else 2)
+        if already:
+            return  # no change, so the camera has nothing new to report
+        try:
+            await asyncio.wait_for(self.light_event.wait(), 3)
+        except TimeoutError:
+            raise RuntimeError("Camera did not confirm the light") from None
+        if self.light is not expected:
+            raise RuntimeError("Camera did not switch the light")
 
     async def source(self):
         """Create a local listener without contacting Blink."""
@@ -175,6 +225,7 @@ class NativeRelay:
                         return
                     upstream.recv = MethodType(recv_packets, upstream)
                     upstream.talk_ack = self.talk_ack
+                    upstream.light_report = self._light_reported
                     # Reuse blinkpy's protocol/auth/keepalive, but not its TCP listener.
                     async with self.lock:
                         if not self.clients or self.closed:
@@ -221,6 +272,7 @@ class NativeRelay:
                 for writer in tuple(self.clients):
                     writer.close()
                 self.stream = None
+                self.light = None
                 self.runner = None
                 self.retry_after = time.monotonic() + cooldown
 

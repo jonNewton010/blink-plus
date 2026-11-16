@@ -157,6 +157,83 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
         finally:
             await relay.close()
 
+    async def test_lamp_reports_reach_the_relay_and_are_not_positions(self):
+        reader = asyncio.StreamReader()
+        seen = []
+        position = b"\0" * 4 + bytes([99, 246, 0])
+        reader.feed_data(
+            b"\x15"
+            + (0).to_bytes(4, "big")
+            + bytes(4)  # session opens: lamp off, no payload
+            + b"\x15"
+            + (1).to_bytes(4, "big")
+            + (4).to_bytes(4, "big")
+            + bytes(4)  # lamp on
+            + b"\x15"
+            + (2).to_bytes(4, "big")
+            + len(position).to_bytes(4, "big")
+            + position
+            + b"\x15"
+            + (7).to_bytes(4, "big")
+            + bytes(4)  # something else: ignored
+        )
+        reader.feed_eof()
+        stream = SimpleNamespace(
+            target_reader=reader,
+            target_writer=Writer(),
+            clients=[],
+            light_report=seen.append,
+        )
+        await transport.recv_packets(stream)
+        self.assertEqual(seen, [False, True])
+        self.assertEqual(stream.position, {"pan": 99, "tilt": -10})
+
+    async def test_light_command_on_the_live_session(self):
+        relay = transport.NativeRelay(SimpleNamespace())
+        heard = []
+        relay.light_listeners.add(heard.append)
+        self.assertFalse(relay.live)
+        with self.assertRaises(RuntimeError):
+            await relay.set_light(True)
+        writer = Writer()
+        relay.stream = SimpleNamespace(target_writer=writer)
+        self.assertTrue(relay.live)
+        relay._light_reported(False)  # what the camera says as the session opens
+
+        async def confirm_on():
+            relay._light_reported(True)
+
+        writer.drain = confirm_on
+        await relay.set_light(True)
+        on = b"\x14" + (1).to_bytes(4, "big") + bytes(4)
+        self.assertEqual(bytes(writer.data), on)
+        self.assertIs(relay.light, True)
+        self.assertEqual(heard, [False, True])
+
+        async def confirm_off():
+            relay._light_reported(False)
+
+        writer.drain = confirm_off
+        await relay.set_light(False)
+        off = b"\x14" + (2).to_bytes(4, "big") + bytes(4)
+        self.assertEqual(bytes(writer.data), on + off)
+
+        # Already off: the command is sent, and no new report is waited for.
+        async def silent():
+            pass
+
+        writer.drain = silent
+        await asyncio.wait_for(relay.set_light(False), 1)
+        self.assertEqual(bytes(writer.data), on + off + off)
+
+    async def test_light_command_needs_the_cameras_confirmation(self):
+        relay = transport.NativeRelay(SimpleNamespace())
+        relay.stream = SimpleNamespace(target_writer=Writer())
+        relay._light_reported(False)
+        with patch.object(transport.asyncio, "wait_for", side_effect=TimeoutError):
+            with self.assertRaisesRegex(RuntimeError, "did not confirm"):
+                await relay.set_light(True)
+
     async def test_talk_start_audio_stop_sequence(self):
         relay = transport.NativeRelay(SimpleNamespace())
         writer = Writer()

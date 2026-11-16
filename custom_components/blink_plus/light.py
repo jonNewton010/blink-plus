@@ -19,6 +19,9 @@ LIGHTS = {
     "superior": ("floodlight", "Floodlight"),
     "hawk": ("spotlight", "Spotlight"),
 }
+# While a live view is open Blink answers its lights request "System is busy", so the lamp is
+# switched on the live session itself (transport.NativeRelay.set_light), as the Blink app does.
+LIVE_COMMAND_SECONDS = 10
 # Blink publishes a command's result a few seconds later; read twice to be sure.
 AFTER_COMMAND_SECONDS = (6, 20)
 # A lit lamp switches itself off (timer, motion ended); follow it for a while.
@@ -73,16 +76,30 @@ class CameraLight(BlinkEntity, LightEntity):
 
     async def async_added_to_hass(self):
         await super().async_added_to_hass()
+        # During live view the camera reports its lamp on the session; show that at once.
+        self.coordinator.light_listeners.setdefault(str(self.camera.serial), set()).add(
+            self._live_report
+        )
         self._start_read()
 
     async def async_will_remove_from_hass(self):
         self._cancel()
+        self.coordinator.light_listeners.get(str(self.camera.serial), set()).discard(
+            self._live_report
+        )
         await super().async_will_remove_from_hass()
 
     @callback
     def _handle_coordinator_update(self):
         self._start_read()
         super()._handle_coordinator_update()
+
+    @callback
+    def _live_report(self, on):
+        self._reported = True
+        if on is not self._enabled:
+            self._enabled = on
+            self.async_write_ha_state()
 
     def _cancel(self):
         self._pending = []
@@ -165,7 +182,18 @@ class CameraLight(BlinkEntity, LightEntity):
                 raise HomeAssistantError("Blink did not accept the lighting request")
             return result
 
-        await self.coordinator.command(request)
+        relay = self.coordinator.relays.get(str(self.camera.serial))
+        if relay is not None and relay.live:
+            try:
+                async with asyncio.timeout(LIVE_COMMAND_SECONDS):
+                    await relay.set_light(enabled)
+            except (RuntimeError, OSError, TimeoutError):
+                # Only fixed text: exception text can carry addresses or tokens.
+                raise HomeAssistantError(
+                    "The camera did not confirm the light during live view; try again"
+                ) from None
+        else:
+            await self.coordinator.command(request)
         self._enabled = enabled
         self._on_checks = 0
         self.async_write_ha_state()

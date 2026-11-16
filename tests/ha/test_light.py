@@ -182,6 +182,53 @@ async def test_failed_status_read_keeps_state_and_falls_back(
     await hass.config_entries.async_unload(account.entry_id)
 
 
+async def test_light_uses_the_live_session_while_live_view_is_open(
+    hass, account, blink, cloud
+):
+    lamp, request, read = cloud
+    camera_of(blink, "hawk")
+    assert await hass.config_entries.async_setup(account.entry_id)
+    await hass.async_block_till_done()
+    entity_id = "light.test_camera_spotlight"
+    relay = account.runtime_data.relay(blink.cameras["Test camera"])
+    sent = []
+
+    async def set_light(on):
+        sent.append(on)
+        relay._light_reported(on)  # the camera confirms on the session
+
+    with (
+        patch.object(type(relay), "live", property(lambda self: True)),
+        patch.object(relay, "set_light", side_effect=set_light),
+    ):
+        await hass.services.async_call(
+            "light", "turn_on", {"entity_id": entity_id}, blocking=True
+        )
+        assert hass.states.get(entity_id).state == "on"
+        # Blink would have answered its normal request with "System is busy".
+        request.assert_not_awaited()
+        # The camera switching its own lamp shows at once, without a poll.
+        relay._light_reported(False)
+        await hass.async_block_till_done()
+        assert hass.states.get(entity_id).state == "off"
+        assert not hass.states.get(entity_id).attributes.get("assumed_state")
+
+        async def refuse(on):
+            raise RuntimeError("immis://secret-address did not confirm")
+
+        relay.set_light.side_effect = refuse
+        with pytest.raises(HomeAssistantError) as raised:
+            await hass.services.async_call(
+                "light", "turn_on", {"entity_id": entity_id}, blocking=True
+            )
+        assert "secret" not in str(raised.value)
+        assert hass.states.get(entity_id).state == "off"
+    assert sent == [True]
+    request.assert_not_awaited()
+    await hass.config_entries.async_unload(account.entry_id)
+    assert not relay.light_listeners
+
+
 async def test_missing_library_method_skips_light(hass, account, blink):
     camera_of(blink, "superior")
     with patch.object(module.api, "request_floodlight", None):

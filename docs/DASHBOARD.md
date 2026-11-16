@@ -25,7 +25,7 @@ On the picture:
 
 - **Player controls** from the browser: pause/play, the time bar, mute and volume, full screen. Video starts muted because browsers only autoplay muted video; use the player's mute button for sound.
 - **Hold to talk**, while live video is playing.
-- **A light button** for a Wired Floodlight or Mini 2. It shows the state Blink reports.
+- **A light button** for a Wired Floodlight or Mini 2. It shows the state Blink reports, and from 1.1.2 it works while live video is playing.
 - **A pan/tilt pad** for cameras selected as having a pan/tilt mount in the integration's options, while live video is playing.
 
 Under the picture:

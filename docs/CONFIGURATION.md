@@ -116,8 +116,13 @@ therefore noticed at the next poll, not instantly. If Blink's report cannot be
 read, the entity keeps the last accepted command and is marked as an assumed
 state until a report arrives.
 
-A busy camera/network can reject a command, including during live view or
-recording. Close live views and retry.
+**During live view.** Blink refuses its normal lights request while a live view
+is open on the camera. From 1.1.2, when the live view is Blink Plus's own (a
+dashboard card, the sidebar page, or any Home Assistant player), the lamp is
+switched on the live session instead, as the Blink app does, and the camera
+confirms it at once. While that session is open the entity also follows the
+lamp instantly. A live view held by the Blink app, or a recording in progress,
+still makes Blink answer busy; try again afterwards.
 
 Floodlight added in 1.0.1; reported state and the Mini 2 spotlight in 1.0.2.
 Example automation action:

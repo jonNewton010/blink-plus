@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.2 - 2026-11-16
+
+The light works during live view.
+
+- Fixed the Floodlight and Spotlight being refused with "Blink is busy" while that camera's live view was open. Blink rejects its normal lights request for as long as a live session exists, so during one Blink Plus now switches the lamp on the live session itself, the way the Blink app does. The camera confirms the change in about a tenth of a second.
+- While live view is open the light entity follows the lamp instantly: the camera reports its lamp on the session when it opens and whenever it changes, including when its own timer switches it off.
+- With no live view open nothing changes: the normal request is used and the state is read from Blink as before. If another app holds a live view on the camera, Blink still answers busy.
+- Verified on a Mini 2 spotlight and a Wired Floodlight: on and off during live video, each confirmed by the camera and by Blink's reported state.
+
 ## 1.1.1 - 2026-11-16
 
 - Added a **Stop live view** button to the Blink Plus camera card, next to the camera's name. It closes the video at once and does not restart when you return to the tab; the same button reads **Start live view** when nothing is playing. The camera's own session ends shortly afterwards, when Home Assistant releases the stream.
