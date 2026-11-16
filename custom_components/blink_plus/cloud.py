@@ -12,14 +12,13 @@ import aiofiles
 from blinkpy import api
 from blinkpy.auth import (
     UnauthorizedError,
-    TokenRefreshFailed,
     LoginError,
     BlinkTwoFARequiredError,
 )
 
+# TokenRefreshFailed is an outage or throttling, not a rejected login.
 AUTH_ERRORS = (
     UnauthorizedError,
-    TokenRefreshFailed,
     LoginError,
     BlinkTwoFARequiredError,
 )

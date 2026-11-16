@@ -4,9 +4,9 @@ Blink Plus is a single Home Assistant config-entry integration requiring `blinkp
 
 ## Setup and lifecycle
 
-The config flow signs in through Blink, requests MFA when necessary, and stores the resulting authentication session in HA's config entry. Passwords and verification codes are not retained by this integration. Reauthentication preserves the registered hardware ID. Session data remains sensitive and is protected by HA's storage and backup security.
+The config flow signs in through Blink, requests MFA when necessary, and stores the resulting authentication session in HA's config entry. Passwords and verification codes are not retained by this integration. Reauthentication preserves the registered hardware ID. The coordinator exchanges the stored refresh token itself at startup and shortly before expiry, so a refused token (reauthentication) is distinguished from a Blink outage (retry); blinkpy's startup would otherwise fall back to a password login that cannot succeed without a stored password. Session data remains sensitive and is protected by HA's storage and backup security.
 
-The coordinator polls cloud state, serializes control operations, and refreshes state following commands. Sensors are created only for available data, including capabilities reported later. Diagnostics use an allowlist and omit account identifiers, camera names, credentials, and media URLs.
+Wired Floodlight cameras (product type `superior`) also get a light entity when the installed blinkpy provides the lighting call; its commands go through the same serialized control path and its state is assumed. The coordinator polls cloud state, serializes control operations, and refreshes state following commands. Sensors are created only for available data, including capabilities reported later. Diagnostics use an allowlist and omit account identifiers, camera names, credentials, and media URLs.
 
 Unload and HA shutdown close relays and cancel owned timers/downloads. Options updates reload the entry. Local MP4 recordings persist; temporary cloud caches do not.
 

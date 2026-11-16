@@ -6,6 +6,8 @@ import asyncio
 from pathlib import Path
 from functools import partial
 from datetime import datetime, timezone
+import time
+from urllib.parse import urlencode
 from uuid import uuid4
 
 from aiohttp import ClientError
@@ -16,7 +18,17 @@ from blinkpy.auth import (
     LoginError,
     BlinkTwoFARequiredError,
 )
-from blinkpy.blinkpy import Blink
+from blinkpy.blinkpy import Blink, BlinkSetupError
+
+try:
+    from blinkpy.helpers.constants import (
+        OAUTH_SCOPE,
+        OAUTH_TOKEN_URL,
+        OAUTH_TOKEN_USER_AGENT,
+        OAUTH_V2_CLIENT_ID,
+    )
+except ImportError:  # A blinkpy without these keeps using its own startup.
+    OAUTH_TOKEN_URL = None
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -26,12 +38,20 @@ from .const import DEFAULTS, DOMAIN
 from .transport import NativeRelay
 from .cloud import CloudClips
 
+# Login form: any of these means the sign-in did not work.
 AUTH_ERRORS = (
     UnauthorizedError,
     TokenRefreshFailed,
     LoginError,
     BlinkTwoFARequiredError,
 )
+# Running entry: only these mean Blink wants a new login. TokenRefreshFailed is
+# what blinkpy raises when the token endpoint answers with anything else (an
+# outage, throttling), so it is retried instead.
+REAUTH_ERRORS = (UnauthorizedError, LoginError, BlinkTwoFARequiredError)
+# Refresh this long before expiry, so blinkpy's own request path rarely has to.
+REFRESH_MARGIN_SECONDS = 120
+REFRESH_TIMEOUT_SECONDS = 30
 # Blink runs one command at a time per network and answers "busy" meanwhile.
 SNAPSHOT_ATTEMPTS = 3
 SNAPSHOT_BUSY_SECONDS = 6
@@ -79,6 +99,59 @@ def token_data(auth):
     }
 
 
+class TokenRejected(Exception):
+    """Blink refused the stored refresh token; only a new login helps."""
+
+
+class BlinkUnreachable(Exception):
+    """Blink could not be reached or did not give a usable answer."""
+
+
+async def refresh_tokens(auth):
+    """Exchange the refresh token for new tokens; never signs in with a password.
+
+    blinkpy's startup treats every failed refresh alike and falls back to a
+    password login, which cannot work here because the password is not stored.
+    Doing the exchange here tells a refused token (400/401) from an outage.
+    """
+    form = {
+        "grant_type": "refresh_token",
+        "refresh_token": auth.refresh_token,
+        "client_id": OAUTH_V2_CLIENT_ID,
+        "scope": OAUTH_SCOPE,
+        "hardware_id": auth.hardware_id,
+    }
+    headers = {
+        "User-Agent": OAUTH_TOKEN_USER_AGENT,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "*/*",
+    }
+    try:
+        async with asyncio.timeout(REFRESH_TIMEOUT_SECONDS):
+            response = await auth.session.post(
+                OAUTH_TOKEN_URL, headers=headers, data=urlencode(form)
+            )
+            try:
+                if response.status in (400, 401):
+                    raise TokenRejected
+                if response.status != 200:
+                    raise BlinkUnreachable(f"HTTP {response.status}")
+                tokens = await response.json()
+            finally:
+                response.release()
+        access_token = tokens["access_token"]
+        expires_in = int(tokens.get("expires_in") or 3600)
+        if not isinstance(access_token, str) or not access_token:
+            raise ValueError
+    except (ClientError, TimeoutError, OSError, ValueError, KeyError, TypeError) as err:
+        # Only the class name: a response or exception text can carry tokens.
+        raise BlinkUnreachable(type(err).__name__) from None
+    auth.token = access_token
+    auth.refresh_token = tokens.get("refresh_token") or auth.refresh_token
+    auth.expires_in = expires_in
+    auth.expiration_date = time.time() + expires_in
+
+
 class BlinkCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
         self.entry = entry
@@ -113,20 +186,67 @@ class BlinkCoordinator(DataUpdateCoordinator):
         )
 
     def auth_error(self, error):
-        if isinstance(error, AUTH_ERRORS):
+        if isinstance(error, REAUTH_ERRORS):
             self.entry.async_start_reauth(self.hass)
+
+    def _refreshes_own_tokens(self):
+        """Whether the entry holds what the token exchange needs."""
+        auth = self.api.auth
+        hardware_id = getattr(auth, "hardware_id", None)
+        return bool(
+            OAUTH_TOKEN_URL
+            and getattr(auth, "refresh_token", None)
+            and hardware_id
+            and hardware_id == self.entry.data.get("hardware_id")
+        )
+
+    async def _refresh_tokens(self):
+        try:
+            await refresh_tokens(self.api.auth)
+        except TokenRejected:
+            raise ConfigEntryAuthFailed("Blink rejected the stored login") from None
+        except BlinkUnreachable as err:
+            raise UpdateFailed(f"Cannot refresh the Blink login ({err})") from None
+        self.save_tokens()
+
+    async def _start(self):
+        """Set up the Blink client; an outage is retried, not shown as a login problem."""
+        api = self.api
+        if not self._refreshes_own_tokens():
+            # Without a refresh token only blinkpy's own startup can sign in.
+            if not await api.start():
+                raise ConfigEntryAuthFailed("Blink login was rejected")
+            return
+        await self._refresh_tokens()
+        # The rest of Blink.start(), after its login step.
+        try:
+            api.setup_urls()
+            await api.get_homescreen()
+        except (BlinkSetupError, AttributeError) as err:
+            # blinkpy hands back no response at all when the request failed.
+            raise UpdateFailed("Blink setup failed") from err
+        if not api.last_refresh:
+            api.last_refresh = int(time.time() - api.refresh_rate * 1.05)
+        if not await api.setup_post_verify():
+            raise UpdateFailed("Blink setup failed")
 
     async def _async_update_data(self):
         try:
             async with asyncio.timeout(60):
                 if not self.api.available:
-                    if not await self.api.start():
-                        raise ConfigEntryAuthFailed("Blink login was rejected")
+                    await self._start()
                 else:
+                    expires = getattr(self.api.auth, "expiration_date", None)
+                    if self._refreshes_own_tokens() and (
+                        expires is None
+                        or expires - time.time()
+                        < self.options["scan_interval"] + REFRESH_MARGIN_SECONDS
+                    ):
+                        await self._refresh_tokens()
                     await self.api.refresh()
-        except AUTH_ERRORS as err:
+        except REAUTH_ERRORS as err:
             raise ConfigEntryAuthFailed("Blink authentication expired") from err
-        except (ClientError, TimeoutError, OSError) as err:
+        except (TokenRefreshFailed, ClientError, TimeoutError, OSError) as err:
             raise UpdateFailed("Cannot reach Blink") from err
         return {str(c.serial): c.attributes for c in self.api.cameras.values()}
 
@@ -154,7 +274,7 @@ class BlinkCoordinator(DataUpdateCoordinator):
                     ):
                         raise HomeAssistantError("Blink did not accept the request")
                     await self.api.refresh(force=True)
-            except AUTH_ERRORS:
+            except REAUTH_ERRORS:
                 self.entry.async_start_reauth(self.hass)
                 raise HomeAssistantError("Blink authentication expired") from None
             except HomeAssistantError:

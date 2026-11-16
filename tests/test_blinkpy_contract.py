@@ -43,6 +43,31 @@ class BlinkpyContractTests(unittest.TestCase):
     def test_camera_can_open_a_live_stream(self):
         self.assertTrue(inspect.iscoroutinefunction(BlinkCamera.init_livestream))
 
+    def test_own_token_refresh_has_what_it_uses(self):
+        # coordinator.py refreshes tokens itself and then finishes Blink.start().
+        from blinkpy.auth import Auth
+        from blinkpy.blinkpy import Blink, BlinkSetupError
+        from blinkpy.helpers import constants
+
+        for name in (
+            "OAUTH_SCOPE",
+            "OAUTH_TOKEN_URL",
+            "OAUTH_TOKEN_USER_AGENT",
+            "OAUTH_V2_CLIENT_ID",
+        ):
+            self.assertIsInstance(getattr(constants, name, None), str, name)
+        self.assertTrue(issubclass(BlinkSetupError, Exception))
+        self.assertTrue(callable(Blink.setup_urls))
+        for name in ("get_homescreen", "setup_post_verify", "refresh", "start"):
+            self.assertTrue(inspect.iscoroutinefunction(getattr(Blink, name)), name)
+        start = inspect.getsource(Blink.start)
+        for step in ("auth.startup()", "setup_urls()", "get_homescreen()"):
+            self.assertIn(step, start)
+        self.assertIn("setup_post_verify()", start)
+        attributes = inspect.getsource(Auth)
+        for name in ("refresh_token", "hardware_id", "expiration_date", "expires_in"):
+            self.assertIn(f"self.{name}", attributes)
+
 
 @unittest.skipIf(BlinkLiveStream is None, "blinkpy is not installed")
 class LiveTokenTests(unittest.IsolatedAsyncioTestCase):

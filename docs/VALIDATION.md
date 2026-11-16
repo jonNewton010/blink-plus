@@ -1,5 +1,15 @@
 # Blink Plus validation - 2026-11-10
 
+## 1.0.1 login renewal and floodlight validation
+
+The integration suite passes 113 automated tests, with five live groups skipped in normal runs.
+
+Login renewal: tests cover a successful renewal (new tokens saved, password never sent or stored), a response without a new refresh token, refused tokens (HTTP 400 and 401), and outages (HTTP 429, 500 and 503, malformed bodies, connection errors and timeouts). Real Home Assistant lifecycle tests confirm that an outage during startup leaves the entry retrying with no reauthentication flow, that a refused token starts exactly one reauthentication flow, that a token near expiry is renewed before the poll, that an outage while running recovers on a later poll, and that entries without a refresh token keep the previous startup path. A compatibility test checks that the installed blinkpy still provides the constants and setup steps this relies on.
+
+The weakness was found by reading blinkpy 0.25.9 and was not reproduced against Blink's service; a real outage cannot be produced on demand. The renewal request is the same one blinkpy sends.
+
+Floodlight: tests cover entity discovery by product type, the on/off services, busy and rejected answers and a blinkpy without the lighting call. No physical Wired Floodlight was operated before release.
+
 ## 0.3.0 native HA push-to-talk validation
 
 The integration suite passes 86 automated tests, including native PCM-to-AAC decoding, websocket session ownership, shared HTTP/microphone locking, microphone disconnect cleanup and three repeated start/audio/stop sequences. JavaScript syntax checks run in CI.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.1 - 2026-11-16
+
+Login renewal that survives Blink outages, and on/off control for Wired Floodlight cameras.
+
+- Fixed a Blink outage or throttled token request being shown as a Reauthenticate prompt. Blink Plus now renews its stored token itself: only a token Blink refuses (HTTP 400/401) asks for a new login; an unreachable or failing Blink is retried. This covers Home Assistant restarts and routine renewals while running. Entries without a stored refresh token keep the previous startup path.
+- Added a native on/off light entity for Blink Wired Floodlight cameras (superior). State is unknown until a successful command and assumed thereafter; Blink does not report external light changes through blinkpy. Covered by automated tests; not yet verified on a physical floodlight at release.
+- Tokens keep being stored without the password or verification code; the renewal request contains the refresh token and registered hardware ID only.
+- Added tests for token renewal, restart and running-entry outages, refused tokens, and a blinkpy compatibility check for the calls the renewal relies on.
+
+Version numbering moves from 0.3.0 to 1.0.1. There is no 1.0.0 release, no breaking change and no migration: entities, options and the stored login are kept.
+
 ## 0.3.0 - 2026-11-10
 
 Native Home Assistant dashboard push-to-talk and reliable repeated holds.

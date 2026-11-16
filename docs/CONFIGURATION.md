@@ -84,3 +84,40 @@ See the [complete talk guide](TWO_WAY_TALK.md) for upgrade steps, a command-line
 For 0.3.0, register /blink_plus/frontend/blink-plus-ptt.js?v=0.3.0 as a JavaScript module resource, then add a custom:blink-plus-ptt element with your camera entity. The [native PTT guide](NATIVE_PTT.md) provides a complete live camera example.
 
 The element uses your authenticated HA session and camera control permission. The integration encodes microphone audio using HA's existing media libraries. Browser capture requires HTTPS or trusted localhost. Hold to speak, release to stop, and wait for stopping to finish before pressing again.
+
+
+### Camera lighting
+
+Blink Wired Floodlight cameras (product type `superior`) automatically get a
+**Floodlight** light entity with on/off control. Other camera models do not get
+this entity. Mini 2 spotlights and battery floodlight accessories are not yet
+supported. Brightness and automatic lighting settings are not exposed.
+
+The state starts unknown and shows the last successful Blink Plus command
+(assumed state). Blinkpy does not report changes made by motion, a timer, or the
+Blink app; reloading resets this state. A busy camera/network can reject a
+command, including during live view or recording. Close live views and retry.
+
+Added in 1.0.1. Example automation action:
+
+```yaml
+action: light.turn_on
+target:
+  entity_id: light.driveway_floodlight
+```
+
+### Login renewal
+
+There is nothing to configure. Blink Plus stores the tokens Blink returns at
+sign-in, together with the registered hardware ID; it never stores the password
+or verification code. From 1.0.1 it renews the token itself when Home Assistant
+starts and shortly before the token expires.
+
+- Blink refuses the token (HTTP 400 or 401): Home Assistant shows
+  **Reauthenticate**. Sign in again; the hardware ID is kept.
+- Blink is unreachable, times out, throttles or returns a server error: the
+  entry retries on its own and no sign-in is requested. Entities are unavailable
+  until Blink answers again.
+
+An entry that holds no refresh token (not produced by current sign-ins) uses
+blinkpy's own startup instead, as earlier versions did.
