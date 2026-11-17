@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 from uuid import uuid4
 
 from aiohttp import ClientError
+from blinkpy import api as blink_api
 from blinkpy.auth import (
     Auth,
     UnauthorizedError,
@@ -57,6 +58,30 @@ SNAPSHOT_ATTEMPTS = 3
 SNAPSHOT_BUSY_SECONDS = 6
 SNAPSHOT_POLL_SECONDS = 3
 SNAPSHOT_WAIT_SECONDS = 45
+# How far back each poll asks Blink for clips. Blink can list a clip several
+# minutes after it started, so this is much longer than one poll.
+CLIP_LOOKBACK_SECONDS = 1800
+CLIP_TIMEOUT_SECONDS = 20
+
+
+def newest_clips(rows):
+    """Camera name -> start of its newest clip in one page of Blink's clip list."""
+    newest = {}
+    for row in rows if isinstance(rows, list) else ():
+        if not isinstance(row, dict) or row.get("deleted"):
+            continue
+        name, created = row.get("device_name"), row.get("created_at")
+        if not isinstance(name, str) or not isinstance(created, str):
+            continue
+        try:
+            when = datetime.fromisoformat(created.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        if name not in newest or when > newest[name]:
+            newest[name] = when
+    return newest
 
 
 def blink_busy(result):
@@ -174,6 +199,8 @@ class BlinkCoordinator(DataUpdateCoordinator):
         self.camera_entities = {}
         self.recording = set()
         self.local_recordings = {}
+        # Camera name -> start of the newest clip Blink has listed for it.
+        self.clip_times = {}
         self.control_lock = asyncio.Lock()
         super().__init__(
             hass,
@@ -251,7 +278,31 @@ class BlinkCoordinator(DataUpdateCoordinator):
             raise ConfigEntryAuthFailed("Blink authentication expired") from err
         except (TokenRefreshFailed, ClientError, TimeoutError, OSError) as err:
             raise UpdateFailed("Cannot reach Blink") from err
+        await self.note_clips()
         return {str(c.serial): c.attributes for c in self.api.cameras.values()}
+
+    async def note_clips(self):
+        """Remember each camera's newest clip; the motion sensors compare against it.
+
+        blinkpy only counts a clip that started after its previous refresh, so a
+        clip Blink lists late, or one followed by a second refresh before Home
+        Assistant is told, never showed as motion. A failed request keeps the
+        earlier answer and never fails the poll.
+        """
+        try:
+            async with asyncio.timeout(CLIP_TIMEOUT_SECONDS):
+                data = await blink_api.request_videos(
+                    self.api, time=int(time.time()) - CLIP_LOOKBACK_SECONDS, page=1
+                )
+        except Exception as err:  # noqa: BLE001 - motion is not worth a failed poll
+            logging.getLogger(__name__).debug(
+                "Blink clip check failed (%s)", type(err).__name__
+            )
+            return
+        found = newest_clips(data.get("media") if isinstance(data, dict) else None)
+        for name, when in found.items():
+            if name not in self.clip_times or when > self.clip_times[name]:
+                self.clip_times[name] = when
 
     def relay(self, camera):
         key = str(camera.serial)
@@ -292,6 +343,7 @@ class BlinkCoordinator(DataUpdateCoordinator):
                 raise HomeAssistantError(
                     "Blink could not complete the request"
                 ) from None
+            await self.note_clips()
             self.async_set_updated_data(
                 {str(c.serial): c.attributes for c in self.api.cameras.values()}
             )

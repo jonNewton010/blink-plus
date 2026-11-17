@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.3 - 2026-11-17
+
+Motion sensors follow Blink's clip list.
+
+- Fixed the Motion binary sensors missing most motion. They showed a library flag that covers only a clip started since the previous refresh and is cleared by the next one. A snapshot refreshes twice before Home Assistant is told, so on an installation that takes snapshots on a timer the flag was usually gone before it could be seen; one of the owner's cameras recorded a clip every day for a week without its sensor turning on once.
+- Blink Plus now reads Blink's list of recent clips itself at every poll and after every command, and turns a camera's Motion sensor on for two minutes when a newer clip appears for it. A clip Blink lists late, up to 30 minutes after it started, still counts. This is one extra small request per poll.
+- Clips already listed when Home Assistant starts are not reported as new motion. A failed clip request keeps the previous answer and never fails the poll.
+- Motion is still polled: the sensor turns on at the first poll or command after Blink lists the clip, which with the default interval is up to five minutes after the event. No changes to entities, stored data or the login.
+
 ## 1.1.2 - 2026-11-16
 
 The light works during live view.

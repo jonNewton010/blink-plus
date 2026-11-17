@@ -55,7 +55,11 @@ def blink():
     with (
         patch("custom_components.blink_plus.coordinator.Blink", return_value=instance),
         patch("custom_components.blink_plus.config_flow.Blink", return_value=instance),
+        patch(
+            "blinkpy.api.request_videos", new=AsyncMock(return_value={"media": []})
+        ) as clips,
     ):
+        instance.clip_list = clips
         yield instance
 
 

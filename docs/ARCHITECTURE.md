@@ -61,6 +61,6 @@ Blink's origin ignored Range requests in testing. The integration therefore down
 
 ## Controls and limitations
 
-Snapshots request a new camera image and wait for updated thumbnail metadata. Ordinary camera stills use the cached image. Motion and arming use Blink control APIs followed by a state refresh. Optional mount commands travel over the native live connection.
+Snapshots request a new camera image and wait for updated thumbnail metadata. Ordinary camera stills use the cached image. Motion and arming use Blink control APIs followed by a state refresh. The Motion binary sensors do not rely on the library's per-refresh motion flag alone: at every poll and after every command the coordinator reads Blink's list of recent clips and keeps each camera's newest clip time, and a sensor turns on for two minutes when that time advances. Optional mount commands travel over the native live connection.
 
 This integration does not implement push events, USB clip retrieval, or every setting in the Blink app. Model-specific capabilities and cloud API behavior can change independently of this project. See [validation evidence](VALIDATION.md) for what was actually tested.

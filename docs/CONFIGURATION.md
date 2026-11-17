@@ -4,7 +4,7 @@ All integration settings are available from **Settings > Devices & services > Bl
 
 ## Polling and live video
 
-- **Polling interval:** 300 seconds by default; range 60-3600. Controls refresh state after commands; motion otherwise follows polling.
+- **Polling interval:** 300 seconds by default; range 60-3600. Controls refresh state after commands; motion otherwise follows polling (see [Motion sensors](#motion-sensors)).
 - **Live view enabled:** on by default. Disable to prevent new live streams and local recordings.
 - **Maximum live duration:** 120 seconds; range 15-300.
 - **Reconnect cooldown:** 30 seconds; range 5-300. Applies after a session reaches its time limit, fails, or is ended by the camera, so a player that keeps reconnecting cannot wake the camera repeatedly. Closing live view normally does not start the cooldown.
@@ -68,7 +68,7 @@ actions:
       entity_id: switch.example_network_armed
 ```
 
-Use HA's automation UI to choose actual entities and triggers. Poll-based motion detection can miss short changes between polls, so assess suitability before relying on it for time-sensitive automations.
+Use HA's automation UI to choose actual entities and triggers. Motion is polled, so a Motion sensor turns on up to one polling interval after the event; assess suitability before relying on it for time-sensitive automations.
 
 ## Two-way talk
 
@@ -89,6 +89,15 @@ The element uses your authenticated HA session and camera control permission. Th
 ### Sidebar page
 
 **Show the Blink Plus page in the sidebar** (on by default) adds a page listing every camera with live view on request and its controls. Switch it off to remove the page; the Blink Plus camera card stays available for your own dashboards. See the [dashboard guide](DASHBOARD.md).
+
+### Motion sensors
+
+Each camera's **Motion** binary sensor turns on when Blink lists a newer clip for that camera, and off again two minutes later. Blink Plus reads Blink's list of the last 30 minutes of clips at every poll and after every command (a snapshot, a switch), so a clip that Blink lists late still counts.
+
+- The sensor follows recorded clips. Motion that records nothing (system disarmed, the camera's motion detection off, the camera inside its retrigger time) does not turn it on.
+- It turns on at the first poll or command after Blink lists the clip. With the default 300-second polling interval that is up to five minutes after the event; a shorter interval shortens the delay.
+- Clips already listed when Home Assistant starts are not reported as new motion.
+- A clip saved only to a Sync Module's USB storage is reported only if the Blink library detects it.
 
 ### Camera lighting
 

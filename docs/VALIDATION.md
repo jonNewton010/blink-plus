@@ -1,5 +1,15 @@
 # Blink Plus validation - 2026-11-10
 
+## 1.1.3 motion sensor validation
+
+The integration suite passes 139 automated tests, with five live groups skipped in normal runs. New tests cover picking each camera's newest clip from Blink's list (bad, deleted and other cameras' rows ignored), a clip listed before startup not counting as motion, a newer clip turning the sensor on without the library flag, the two-minute hold, an older clip turning up later, a failed clip request leaving the poll working, the library flag still counting, the check after a command, and the pending release being cancelled on unload.
+
+The fault was measured on the owner's installation with 1.1.2, from Home Assistant's history of 2026-11-10 to 2026-11-17 for seven cameras: of 463 clips shown by the Last recording sensors, 71 coincided with the camera's Motion sensor turning on. One battery camera recorded 13 clips and its Motion sensor never turned on. That installation takes snapshots on a timer, which is what cleared the library flag.
+
+Live check on the owner's installation, 2026-11-17: with the 1.1.3 files installed and Home Assistant restarted, three cameras recorded clips within the next six minutes (a battery camera, a second battery camera and the doorbell). All three Motion sensors turned on at the following poll, including the camera whose sensor had not turned on for a week.
+
+Limits: one live check of three clips. The share of clips reported over a longer period was not measured.
+
 ## 1.1.2 light during live view validation
 
 The integration suite passes 131 automated tests, with five live groups skipped in normal runs. New tests cover lamp reports on the accessory channel (with and without payload, not confused with mount positions), the exact on and off packets, waiting for the camera's confirmation, the command being refused without an open session, the light entity choosing the live session over the REST request while one is open, instant state from a camera report, and a failed session command raising a fixed message.

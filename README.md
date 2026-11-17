@@ -6,7 +6,7 @@ Native Blink live video and audio, dashboard push-to-talk, local recording, clou
 
 [Installation](#installation) | [Dashboard page and card](docs/DASHBOARD.md) | [Options](docs/CONFIGURATION.md) | [HA push-to-talk](docs/NATIVE_PTT.md) | [Talk API](docs/TWO_WAY_TALK.md) | [How it works](docs/ARCHITECTURE.md) | [Test results](docs/VALIDATION.md) | [Changelog](CHANGELOG.md)
 
-**Current release: v1.1.2.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
+**Current release: v1.1.3.** Requires Home Assistant 2026.11.0 or newer and a Blink account. This independent project uses unofficial Blink cloud APIs and is not affiliated with Amazon or Blink.
 
 Live view and cloud browsing are enabled by default. A camera starts streaming when a player connects. Snapshot, recording, motion, arming, and enabled pan/tilt controls can operate your cameras; setup does not automatically arm the system or start recordings. Battery cameras still need to wake and contact Blink's cloud.
 
@@ -29,6 +29,10 @@ Live view and cloud browsing are enabled by default. A camera starts streaming w
 - An on/off **Floodlight** light entity for Blink Wired Floodlight cameras and a **Spotlight** entity for Blink Mini 2 cameras, showing the lamp state Blink reports.
 - UI login, verification-code entry, reauthentication, configuration, and redacted diagnostics.
 - Login renewal that retries through a Blink outage and asks you to sign in again only when Blink refuses the stored token. Your password and verification code are never stored.
+
+## Fixed in 1.1.3
+
+**Motion sensors that follow every clip.** The Motion binary sensors now turn on, for two minutes, whenever Blink lists a newer clip for the camera. Earlier versions relied on a short-lived library flag and missed most clips on installations that take snapshots on a timer. See [Motion sensors](docs/CONFIGURATION.md#motion-sensors).
 
 ## New in 1.1.0
 
@@ -85,7 +89,7 @@ See the [HACS custom repository instructions](https://www.hacs.xyz/docs/faq/cust
 
 ### Manual installation
 
-Download the release's `blink-plus-v1.1.2.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
+Download the release's `blink-plus-v1.1.3.zip`. Extract its `custom_components/blink_plus` folder into your HA configuration directory, producing `/config/custom_components/blink_plus/manifest.json`. Restart HA, then follow steps 4-6 above. Do not place the enclosing repository folder inside `custom_components`.
 
 ### Moving from the built-in Blink integration
 
@@ -93,7 +97,7 @@ Blink Plus uses its own `blink_plus` domain and creates new entities. Existing d
 
 ## Updating from an earlier version
 
-Download 1.1.2 in HACS / Marketplace, restart Home Assistant and refresh the browser page once. The Blink Plus page appears in the sidebar; the option to hide it is in the integration's Configure menu. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
+Download 1.1.3 in HACS / Marketplace, restart Home Assistant and refresh the browser page once. The Blink Plus page appears in the sidebar; the option to hide it is in the integration's Configure menu. Existing Blink Plus entities, settings and the stored login are retained; you are not asked to sign in again. A Wired Floodlight camera gains its Floodlight entity and a Mini 2 its Spotlight entity after the restart. Live viewing, snapshots, recordings, cloud clips, motion/arming and pan/tilt remain available. Talk uses the existing camera entity and an open live session. Add the JavaScript module and button using the [native PTT guide](docs/NATIVE_PTT.md).
 
 ## Everyday use
 
@@ -111,13 +115,13 @@ Seven cameras, including Mini, battery-camera, and doorbell classes, passed real
 
 Local MP4 recording was tested on all three camera classes. Cloud browsing listed 1,000 clips across seven camera folders and verified authenticated, seekable playback. Snapshot, motion/arming, and mount controls were exercised and original settings restored.
 
-The automated suite contains **131 tests**, plus five opt-in live-test groups. See [Validation](docs/VALIDATION.md) for measurements and limits. Fresh login/MFA has automated coverage; live tests reused an existing session. Other models, phone playback, casting, and long-term reliability remain unverified.
+The automated suite contains **139 tests**, plus five opt-in live-test groups. See [Validation](docs/VALIDATION.md) for measurements and limits. Fresh login/MFA has automated coverage; live tests reused an existing session. Other models, phone playback, casting, and long-term reliability remain unverified.
 
 Two-way talk was verified with a Mini-class camera using real voice and tones, including with the Blink app closed. Other camera models need independent speaker testing. The included HA dashboard element provides microphone capture. See [Native push-to-talk](docs/NATIVE_PTT.md).
 
 ## Current limits
 
-Motion is polled rather than pushed. Light control is on/off only, for Wired Floodlight and Mini 2 cameras. A change made outside Home Assistant while the lamp was off appears at the next poll, not instantly. Battery floodlight accessories, brightness and the lamp's timer settings are not supported. Night vision, sensitivity, activity zones, remote clip settings, and Sync Module USB clips are not implemented. Camera-reported data varies by model and account. Blink cloud availability, subscription entitlements, and camera settings still apply.
+Motion is polled rather than pushed: a Motion sensor turns on at the first poll after Blink lists the clip, up to one polling interval after the event. Light control is on/off only, for Wired Floodlight and Mini 2 cameras. A change made outside Home Assistant while the lamp was off appears at the next poll, not instantly. Battery floodlight accessories, brightness and the lamp's timer settings are not supported. Night vision, sensitivity, activity zones, remote clip settings, and Sync Module USB clips are not implemented. Camera-reported data varies by model and account. Blink cloud availability, subscription entitlements, and camera settings still apply.
 
 Live sessions are time-limited to protect resources and batteries. Leaving a live card open can cause later reconnects; configure session duration and cooldown deliberately. Home Assistant's per-camera **Preload stream** setting is ignored for Blink Plus cameras, because it would keep waking them with nobody watching. For continuous surveillance, these cloud battery cameras have practical limits.
 
