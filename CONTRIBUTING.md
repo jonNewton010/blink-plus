@@ -25,4 +25,4 @@ The normal suite uses no Blink account. The `test_*_manual.py` groups require ex
 5. Publish an immutable version tag and full GitHub release after CI succeeds. Build manual-install assets from that commit, with SHA256 checksums.
 6. Verify release/tag targets and assets. Never silently retag an existing release.
 
-HACS custom-repository support and acceptance into the default catalog are separate. Do not claim catalog acceptance until the repository is actually listed.
+Blink Plus has been in the HACS default catalog since 2026-11-16 (hacs/default#13872). The README leads with the catalog search and keeps the custom-repository steps as a fallback; keep it that way.

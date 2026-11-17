@@ -60,18 +60,28 @@ The [native push-to-talk guide](docs/NATIVE_PTT.md) includes the resource URL, Y
 
 ## Installation
 
-### HACS / Marketplace custom repository
+### HACS / Marketplace (recommended)
 
-This repository can be installed as a custom integration repository. A passing HACS check does not mean it has been accepted into the default catalog.
+Blink Plus is in the HACS default catalog, so there is no repository to add.
 
 1. Open HACS (called **Marketplace** on newer installations).
-2. Open its menu, choose **Custom repositories**, and add `https://github.com/zperkd/blink-plus` with category **Integration**.
-3. Find **Blink Plus**, download it, and restart Home Assistant.
+2. Search for **Blink Plus** and open it. [This link](https://my.home-assistant.io/redirect/hacs_repository/?owner=zperkd&repository=blink-plus&category=integration) opens the same page in your Home Assistant.
+3. Choose **Download**, then restart Home Assistant.
 4. Open **Settings > Devices & services > Add integration** and search for **Blink Plus**.
 5. Enter your Blink account email and password, then the verification code if requested.
 6. Open the integration's **Configure** menu to adjust polling, streaming, recording, cloud browsing, and optional pan/tilt settings.
 
-HACS must already be installed. UI wording can vary by version. See [HACS custom repository instructions](https://www.hacs.xyz/docs/faq/custom_repositories/).
+HACS must already be installed. UI wording can vary by version.
+
+### If Blink Plus is not in the search results
+
+An older HACS installation, or one that has not refreshed its catalog yet, may not list Blink Plus. Add it as a custom repository instead:
+
+1. In HACS, open the menu and choose **Custom repositories**.
+2. Add `https://github.com/zperkd/blink-plus` with category **Integration**.
+3. Continue from step 2 of the list above.
+
+See the [HACS custom repository instructions](https://www.hacs.xyz/docs/faq/custom_repositories/).
 
 ### Manual installation
 
