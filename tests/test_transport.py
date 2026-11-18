@@ -1,6 +1,7 @@
 """Protocol and data tests; run with python -m unittest discover -s tests -v."""
 
 import asyncio
+from hashlib import sha256
 import importlib.util
 from pathlib import Path
 import ssl
@@ -92,6 +93,59 @@ class LiveTlsTests(unittest.IsolatedAsyncioTestCase):
         connect.assert_awaited_once()
         self.stream.get_auth_header.assert_not_called()
         self.assertIsNone(self.stream.target_writer)
+
+    async def test_ip_relay_sends_auth_after_verifying_vendor_certificate(self):
+        self.stream.target = urlparse("immis://203.0.113.1:444/live")
+        reader = asyncio.StreamReader()
+        writer = Writer()
+        bundled_certificate = ssl.PEM_cert_to_DER_cert(
+            (ROOT / "blink-immis.pem").read_text()
+        )
+        self.assertEqual(
+            sha256(bundled_certificate).hexdigest(),
+            "b1bfa71ba445f0de14172a1382db19e8848f93b850eb78bd13fdabc1be7e2481",
+        )
+        tls = Mock()
+        tls.getpeercert.return_value = bundled_certificate
+        writer.get_extra_info = Mock(return_value=tls)
+
+        async def connect(host, port, *, ssl, server_hostname):
+            self.assertEqual((host, port), ("203.0.113.1", 444))
+            self.assertEqual(server_hostname, "*.immedia-semi.com")
+            self.assertEqual(ssl.verify_mode, expected_verify_mode)
+            self.assertEqual(ssl.get_ca_certs(binary_form=True), [bundled_certificate])
+            self.stream.get_auth_header.assert_not_called()
+            return reader, writer
+
+        expected_verify_mode = ssl.CERT_REQUIRED
+        with patch.object(transport.asyncio, "open_connection", new=connect):
+            await transport._authenticate_livestream(self.stream)
+
+        writer.get_extra_info.assert_called_once_with("ssl_object")
+        tls.getpeercert.assert_called_once_with(binary_form=True)
+        self.assertIs(self.stream.target_reader, reader)
+        self.assertIs(self.stream.target_writer, writer)
+        self.assertEqual(writer.data, b"session-token")
+
+    async def test_ip_relay_rejects_a_different_leaf_even_after_tls_verification(self):
+        self.stream.target = urlparse("immis://[2001:db8::1]/live")
+        writer = Writer()
+        tls = Mock()
+        tls.getpeercert.return_value = b"different leaf certificate"
+        writer.get_extra_info = Mock(return_value=tls)
+        connect = AsyncMock(return_value=(asyncio.StreamReader(), writer))
+
+        with patch.object(transport.asyncio, "open_connection", new=connect):
+            with self.assertRaisesRegex(
+                ssl.SSLCertVerificationError, "Unexpected Blink relay certificate"
+            ):
+                await transport._authenticate_livestream(self.stream)
+
+        connect.assert_awaited_once()
+        self.stream.get_auth_header.assert_not_called()
+        self.assertIsNone(self.stream.target_writer)
+        self.assertTrue(writer.closed)
+        self.assertFalse(writer.data)
 
     async def test_relay_logs_verify_code_without_exception_text(self):
         error = ssl.SSLCertVerificationError("private relay details")

@@ -4,15 +4,37 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
+from hashlib import sha256
+from ipaddress import ip_address
 import logging
+from pathlib import Path
 import ssl
 import time
 from types import MethodType
 
 _LOGGER = logging.getLogger(__name__)
 MAX_PAYLOAD = 8 * 1024 * 1024
+BLINK_RELAY_CERTIFICATE = Path(__file__).with_name("blink-immis.pem")
+BLINK_RELAY_CERTIFICATE_SHA256 = (
+    "b1bfa71ba445f0de14172a1382db19e8848f93b850eb78bd13fdabc1be7e2481"
+)
+BLINK_RELAY_SERVER_NAME = "*.immedia-semi.com"
 # The parts of blinkpy's live stream object this relay builds on.
 REQUIRED = ("feed", "recv", "stop", "clients", "target_reader", "target_writer")
+
+
+def _relay_tls(host):
+    """Select the trust store and peer identity for an IMMIS endpoint."""
+    try:
+        ip_address(host)
+    except ValueError:
+        return ssl.create_default_context(), host, False
+
+    context = ssl.create_default_context(cafile=str(BLINK_RELAY_CERTIFICATE))
+    # The IP is absent from Blink's certificate. Use the exact leaf as identity,
+    # and send the service name used by the app in SNI. Keep CERT_REQUIRED.
+    context.check_hostname = False
+    return context, BLINK_RELAY_SERVER_NAME, True
 
 
 async def _authenticate_livestream(stream):
@@ -21,16 +43,26 @@ async def _authenticate_livestream(stream):
     if not host:
         raise ValueError("Blink live relay is missing a hostname")
 
-    # Creating a default context reads the system trust store.
-    tls_context = await asyncio.to_thread(ssl.create_default_context)
-    stream.target_reader, stream.target_writer = await asyncio.open_connection(
+    # Loading either trust store reads from disk.
+    tls_context, server_name, check_pin = await asyncio.to_thread(_relay_tls, host)
+    reader, writer = await asyncio.open_connection(
         host,
         stream.target.port or 443,
         ssl=tls_context,
-        server_hostname=host,
+        server_hostname=server_name,
     )
-    stream.target_writer.write(stream.get_auth_header())
-    await stream.target_writer.drain()
+    if check_pin:
+        tls = writer.get_extra_info("ssl_object")
+        peer = tls.getpeercert(binary_form=True) if tls else None
+        if not peer or sha256(peer).hexdigest() != BLINK_RELAY_CERTIFICATE_SHA256:
+            writer.close()
+            with suppress(OSError, TimeoutError):
+                await asyncio.wait_for(writer.wait_closed(), 2)
+            raise ssl.SSLCertVerificationError("Unexpected Blink relay certificate")
+
+    stream.target_reader, stream.target_writer = reader, writer
+    writer.write(stream.get_auth_header())
+    await writer.drain()
 
 
 async def init_livestream(camera):
