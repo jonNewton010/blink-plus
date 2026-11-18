@@ -1,6 +1,6 @@
 # How Blink Plus works
 
-Blink Plus is a single Home Assistant config-entry integration requiring `blinkpy>=0.25.9` (tested with 0.25.9; HA may select a newer compatible dependency). HA owns credentials, polling, entities, stream players, and media browsing. No separate relay service, Android app, external container, or exposed network port is required.
+Blink Plus is a single Home Assistant config-entry integration. This fork pins BlinkPy to `0.25.9`, the version used by Home Assistant 2026.11.2 and reviewed for this change. HA owns credentials, polling, entities, stream players, and media browsing. No separate relay service, Android app, external container, or exposed network port is required.
 
 ## Setup and lifecycle
 
@@ -23,9 +23,9 @@ Each camera receives an ephemeral TCP listener bound to loopback. The upstream l
 
 The relay scopes a compatibility fix to each connection, validates payload lengths, bounds client writes, and cleans up disconnects. Session duration and reconnect cooldown constrain repeated cloud/camera use. HA's per-camera preload setting is forced off for these streams, so a stream with no viewer idles out instead of restarting. Native video preserves the camera's actual resolution and frame rate; HA stream probing and HLS buffering still contribute to startup time.
 
-The native transport inherits blinkpy 0.25.9's IMMI TLS behavior, including its disabled certificate verification on that live connection. REST requests use HA's aiohttp session. This implementation does not claim end-to-end verified TLS for the native live transport.
+The native transport verifies the relay certificate against Python's default trust store and checks it against the relay hostname before sending the IMMI authentication header. A certificate or hostname verification failure ends the session without retrying over unverified TLS. REST requests use HA's aiohttp session. Live compatibility with Blink's relay certificates needs to be tested on the target camera.
 
-The relay builds on blinkpy's live stream object, which is not a stable public interface, and Home Assistant decides which blinkpy version is installed. Before starting a session the relay checks that the object still has the parts it uses; if not, live view fails with a clear `incompatible_blinkpy` error instead of misbehaving. A contract test and a CI job against the newest blinkpy release give early warning.
+The relay builds on BlinkPy's live stream object, which is not a stable public interface. Before starting a session the relay checks that the object has the parts it uses. If they are missing, live view reports `incompatible_blinkpy`. The contract tests check that BlinkPy's stream dispatches authentication and reads to the methods replaced on the relay instance. The CI job against the newest BlinkPy release gives early warning before updating the pin.
 
 ## Direct live stream
 

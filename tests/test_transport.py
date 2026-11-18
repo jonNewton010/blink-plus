@@ -3,9 +3,11 @@
 import asyncio
 import importlib.util
 from pathlib import Path
+import ssl
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1] / "custom_components" / "blink_plus"
 
@@ -40,6 +42,46 @@ class Writer:
 
     async def wait_closed(self):
         pass
+
+
+class LiveTlsTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.stream = SimpleNamespace(
+            target=urlparse("immis://relay.example:443/live"),
+            target_reader=None,
+            target_writer=None,
+            get_auth_header=Mock(return_value=b"session-token"),
+        )
+
+    async def test_sends_auth_only_after_verified_tls(self):
+        reader = asyncio.StreamReader()
+        writer = Writer()
+        expected_verify_mode = ssl.CERT_REQUIRED
+
+        async def connect(host, port, *, ssl, server_hostname):
+            self.assertEqual((host, port), ("relay.example", 443))
+            self.assertEqual(server_hostname, host)
+            self.assertEqual(ssl.verify_mode, expected_verify_mode)
+            self.assertTrue(ssl.check_hostname)
+            self.stream.get_auth_header.assert_not_called()
+            return reader, writer
+
+        with patch.object(transport.asyncio, "open_connection", new=connect):
+            await transport._authenticate_livestream(self.stream)
+
+        self.assertIs(self.stream.target_reader, reader)
+        self.assertIs(self.stream.target_writer, writer)
+        self.assertEqual(writer.data, b"session-token")
+
+    async def test_certificate_failure_does_not_send_auth_or_retry(self):
+        connect = AsyncMock(side_effect=ssl.SSLCertVerificationError("untrusted relay"))
+        with patch.object(transport.asyncio, "open_connection", new=connect):
+            with self.assertRaises(ssl.SSLCertVerificationError):
+                await transport._authenticate_livestream(self.stream)
+
+        connect.assert_awaited_once()
+        self.stream.get_auth_header.assert_not_called()
+        self.assertIsNone(self.stream.target_writer)
 
 
 class ProtocolTests(unittest.IsolatedAsyncioTestCase):

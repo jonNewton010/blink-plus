@@ -36,9 +36,11 @@ class BlinkpyContractTests(unittest.TestCase):
         for name in ("feed", "recv"):
             self.assertTrue(inspect.iscoroutinefunction(getattr(stream, name)), name)
 
-    def test_feed_reads_through_the_replaceable_recv(self):
-        # The relay swaps in its own recv on one stream object.
-        self.assertIn("self.recv()", inspect.getsource(BlinkLiveStream.feed))
+    def test_feed_dispatches_to_instance_auth_and_recv(self):
+        # The relay replaces these two methods on one stream object.
+        feed = inspect.getsource(BlinkLiveStream.feed)
+        self.assertIn("await self.auth()", feed)
+        self.assertIn("self.recv()", feed)
 
     def test_camera_can_open_a_live_stream(self):
         self.assertTrue(inspect.iscoroutinefunction(BlinkCamera.init_livestream))
@@ -90,6 +92,7 @@ class LiveTokenTests(unittest.IsolatedAsyncioTestCase):
         ) as request:
             request.return_value = response
             stream = await transport.init_livestream(camera)
+        self.assertIs(stream.auth.__func__, transport._authenticate_livestream)
         header = stream.get_auth_header()
         self.assertEqual(header[:34], original[:34])
         self.assertEqual(header[34:98], b"test-session-token".ljust(64, b"\x00"))

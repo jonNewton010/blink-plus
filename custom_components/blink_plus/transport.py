@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import suppress
 import logging
+import ssl
 import time
 from types import MethodType
 
@@ -12,6 +13,22 @@ _LOGGER = logging.getLogger(__name__)
 MAX_PAYLOAD = 8 * 1024 * 1024
 # The parts of blinkpy's live stream object this relay builds on.
 REQUIRED = ("feed", "recv", "stop", "clients", "target_reader", "target_writer")
+
+
+async def _authenticate_livestream(stream):
+    """Verify the Blink relay before sending the stream authentication header."""
+    host = stream.target.hostname
+    if not host:
+        raise ValueError("Blink live relay is missing a hostname")
+
+    stream.target_reader, stream.target_writer = await asyncio.open_connection(
+        host,
+        stream.target.port or 443,
+        ssl=ssl.create_default_context(),
+        server_hostname=host,
+    )
+    stream.target_writer.write(stream.get_auth_header())
+    await stream.target_writer.drain()
 
 
 async def init_livestream(camera):
@@ -28,6 +45,8 @@ async def init_livestream(camera):
     if not response["server"].startswith("immis://"):
         raise NotImplementedError("Unsupported Blink stream transport")
     stream = BlinkLiveStream(camera, response)
+    # BlinkPy's feed() calls self.auth(). Scope verified TLS to this instance.
+    stream.auth = MethodType(_authenticate_livestream, stream)
     token = response.get("liveview_token")
     if token:
         if not isinstance(token, str) or len(token.encode("utf-8")) > 64:
@@ -226,7 +245,7 @@ class NativeRelay:
                     upstream.recv = MethodType(recv_packets, upstream)
                     upstream.talk_ack = self.talk_ack
                     upstream.light_report = self._light_reported
-                    # Reuse blinkpy's protocol/auth/keepalive, but not its TCP listener.
+                    # Reuse BlinkPy's protocol and keepalive over the verified connection.
                     async with self.lock:
                         if not self.clients or self.closed:
                             return
