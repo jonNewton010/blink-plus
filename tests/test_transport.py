@@ -4,6 +4,7 @@ import asyncio
 import importlib.util
 from pathlib import Path
 import ssl
+import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
@@ -57,6 +58,12 @@ class LiveTlsTests(unittest.IsolatedAsyncioTestCase):
         reader = asyncio.StreamReader()
         writer = Writer()
         expected_verify_mode = ssl.CERT_REQUIRED
+        event_loop_thread = threading.get_ident()
+        create_default_context = ssl.create_default_context
+
+        def load_trust_store():
+            self.assertNotEqual(threading.get_ident(), event_loop_thread)
+            return create_default_context()
 
         async def connect(host, port, *, ssl, server_hostname):
             self.assertEqual((host, port), ("relay.example", 443))
@@ -66,7 +73,10 @@ class LiveTlsTests(unittest.IsolatedAsyncioTestCase):
             self.stream.get_auth_header.assert_not_called()
             return reader, writer
 
-        with patch.object(transport.asyncio, "open_connection", new=connect):
+        with (
+            patch.object(transport.ssl, "create_default_context", new=load_trust_store),
+            patch.object(transport.asyncio, "open_connection", new=connect),
+        ):
             await transport._authenticate_livestream(self.stream)
 
         self.assertIs(self.stream.target_reader, reader)
@@ -82,6 +92,31 @@ class LiveTlsTests(unittest.IsolatedAsyncioTestCase):
         connect.assert_awaited_once()
         self.stream.get_auth_header.assert_not_called()
         self.assertIsNone(self.stream.target_writer)
+
+    async def test_relay_logs_verify_code_without_exception_text(self):
+        error = ssl.SSLCertVerificationError("private relay details")
+        error.verify_code = 62
+        self.stream.feed = AsyncMock(side_effect=error)
+        self.stream.recv = AsyncMock()
+        self.stream.stop = Mock()
+        self.stream.clients = []
+        relay = transport.NativeRelay(object())
+        relay.clients.add(Writer())
+
+        with (
+            patch.object(
+                transport,
+                "init_livestream",
+                new=AsyncMock(return_value=self.stream),
+            ),
+            self.assertLogs(transport.__name__, level="WARNING") as logs,
+        ):
+            await relay._run()
+
+        self.assertEqual(
+            logs.records[0].getMessage(),
+            "Blink live session ended (SSLCertVerificationError, verify_code=62)",
+        )
 
 
 class ProtocolTests(unittest.IsolatedAsyncioTestCase):

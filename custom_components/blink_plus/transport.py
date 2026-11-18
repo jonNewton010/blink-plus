@@ -21,10 +21,12 @@ async def _authenticate_livestream(stream):
     if not host:
         raise ValueError("Blink live relay is missing a hostname")
 
+    # Creating a default context reads the system trust store.
+    tls_context = await asyncio.to_thread(ssl.create_default_context)
     stream.target_reader, stream.target_writer = await asyncio.open_connection(
         host,
         stream.target.port or 443,
-        ssl=ssl.create_default_context(),
+        ssl=tls_context,
         server_hostname=host,
     )
     stream.target_writer.write(stream.get_auth_header())
@@ -268,7 +270,19 @@ class NativeRelay:
         except Exception as err:
             # Never log protocol URLs, tokens, credentials, or exception text.
             self.last_error = type(err).__name__
-            _LOGGER.warning("Blink live session ended (%s)", self.last_error)
+            verify_code = (
+                getattr(err, "verify_code", None)
+                if isinstance(err, ssl.SSLCertVerificationError)
+                else None
+            )
+            if isinstance(verify_code, int):
+                _LOGGER.warning(
+                    "Blink live session ended (%s, verify_code=%d)",
+                    self.last_error,
+                    verify_code,
+                )
+            else:
+                _LOGGER.warning("Blink live session ended (%s)", self.last_error)
             if self.on_auth_error:
                 self.on_auth_error(err)
         finally:
